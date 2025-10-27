@@ -18,8 +18,8 @@ import structlog
 
 logger = structlog.get_logger()
 
-# 数据库基础类
-Base = declarative_base()
+# 导入媒体模型
+from core.media_models import Base, MediaLibrary, MediaItem, TVSeason, TVEpisode, Plugin, SystemSettings
 
 
 class FileHistory(Base):
