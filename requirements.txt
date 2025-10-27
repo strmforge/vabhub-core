@@ -57,7 +57,7 @@ beautifulsoup4==4.12.2
 pyyaml==6.0.1
 
 # 下载器支持
-qbittorrent-api==0.4.4
+qbittorrent-api>=2025.7.0
 transmission-rpc==4.2.0
 
 # 媒体识别增强
