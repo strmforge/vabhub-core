@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="vabhub-core",
-    version="1.1.0",
+    version='1.2.0',
     author="VabHub Team",
     author_email="team@vabhub.org",
     description="VabHub Core Backend Service - Media Management System",
