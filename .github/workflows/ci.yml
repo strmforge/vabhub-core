@@ -26,7 +26,7 @@ jobs:
     
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip
+        python -m pip install --upgrade pip setuptools wheel
         pip install -r requirements.txt
         pip install pytest pytest-asyncio
     
@@ -80,7 +80,7 @@ jobs:
     
     - name: Build package
       run: |
-        pip install build
+        python -m pip install --upgrade pip setuptools wheel build
         python -m build
     
     - name: Upload build artifacts

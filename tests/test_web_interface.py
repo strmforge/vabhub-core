@@ -10,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fastapi.testclient import TestClient
-from web_interface import app
+from app.main import app
 
 
 class TestWebInterface(unittest.TestCase):
