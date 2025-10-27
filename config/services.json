@@ -1,0 +1,102 @@
+{
+  "api-gateway": {
+    "name": "api-gateway",
+    "image": "media-renamer/api-gateway:latest",
+    "replicas": 3,
+    "port": 8000,
+    "env_vars": {
+      "ENVIRONMENT": "production",
+      "LOG_LEVEL": "INFO"
+    },
+    "resources": {
+      "requests": "256Mi",
+      "limits": "512Mi"
+    },
+    "health_check": {
+      "path": "/health",
+      "port": 8000,
+      "initial_delay": 30,
+      "period": 10
+    }
+  },
+  "media-service": {
+    "name": "media-service",
+    "image": "media-renamer/media-service:latest",
+    "replicas": 2,
+    "port": 8001,
+    "env_vars": {
+      "ENVIRONMENT": "production",
+      "MAX_WORKERS": "4"
+    },
+    "resources": {
+      "requests": "512Mi",
+      "limits": "1Gi"
+    },
+    "health_check": {
+      "path": "/health",
+      "port": 8001,
+      "initial_delay": 30,
+      "period": 10
+    }
+  },
+  "ai-service": {
+    "name": "ai-service",
+    "image": "media-renamer/ai-service:latest",
+    "replicas": 2,
+    "port": 8002,
+    "env_vars": {
+      "ENVIRONMENT": "production",
+      "AI_MODEL": "gpt-4"
+    },
+    "resources": {
+      "requests": "1Gi",
+      "limits": "2Gi"
+    },
+    "health_check": {
+      "path": "/health",
+      "port": 8002,
+      "initial_delay": 60,
+      "period": 15
+    }
+  },
+  "user-service": {
+    "name": "user-service",
+    "image": "media-renamer/user-service:latest",
+    "replicas": 2,
+    "port": 8003,
+    "env_vars": {
+      "ENVIRONMENT": "production",
+      "SESSION_TIMEOUT": "3600"
+    },
+    "resources": {
+      "requests": "256Mi",
+      "limits": "512Mi"
+    },
+    "health_check": {
+      "path": "/health",
+      "port": 8003,
+      "initial_delay": 30,
+      "period": 10
+    }
+  },
+  "storage-service": {
+    "name": "storage-service",
+    "image": "media-renamer/storage-service:latest",
+    "replicas": 2,
+    "port": 8004,
+    "env_vars": {
+      "ENVIRONMENT": "production",
+      "STORAGE_PATH": "/data"
+    },
+    "resources": {
+      "requests": "512Mi",
+      "limits": "1Gi"
+    },
+    "health_check": {
+      "path": "/health",
+      "port": 8004,
+      "initial_delay": 30,
+      "period": 10
+    }
+  }
+}

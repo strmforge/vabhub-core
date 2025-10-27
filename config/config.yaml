@@ -1,0 +1,85 @@
+# VabHub 配置
+app:
+  name: "VabHub"
+  version: "4.0.0"
+  debug: false
+
+# 工作流配置
+workflow:
+  enable: true
+  stages:
+    - scan
+    - classify
+    - rename
+    - metadata
+    - notify
+  
+  # 并发设置
+  max_workers: 4
+  batch_size: 10
+
+# 识别器配置
+recognizer:
+  # 发布组识别
+  release_groups:
+    enable: true
+    custom_groups: []
+  
+  # 中文数字转换
+  chinese_numbers:
+    enable: true
+    use_cn2an: true
+  
+  # 质量评分权重
+  quality_weights:
+    resolution: 0.4
+    source: 0.3
+    codec: 0.2
+    audio: 0.1
+
+# 模板配置
+templates:
+  movie: "{title} ({year})"
+  tv: "{title}/Season {season:02d}/{title} - S{season:02d}E{episode:02d}"
+  music: "Music/{artist}/{album}/{track:02d} - {title}"
+
+# 分类配置
+categories:
+  # 分类策略配置文件路径
+  config_file: "config/categories.yaml"
+  # 是否启用二级分类
+  enable: true
+  # 默认分类策略
+  default_strategy: "default-category"
+
+# 插件配置
+plugins:
+  # 云存储插件
+  cloud:
+    - name: "local"
+      enable: true
+    - name: "115"
+      enable: false
+      cookie: ""
+  
+  # 元数据插件
+  metadata:
+    - name: "tmdb"
+      enable: false
+      api_key: ""
+    - name: "musicbrainz"
+      enable: true
+  
+  # 通知插件
+  notify:
+    - name: "emby"
+      enable: false
+      url: ""
+      api_key: ""
+
+# 日志配置
+logging:
+  level: "INFO"
+  file: "logs/app.log"
+  max_size: "10MB"
+  backup_count: 5

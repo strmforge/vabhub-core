@@ -1,0 +1,98 @@
+# PT站点配置
+pt_sites:
+  # NexusPHP类型站点
+  nexusphp:
+    - name: "m-team"
+      url: "https://tp.m-team.cc"
+      cookie: ""
+      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+      
+    - name: "hdsky"
+      url: "https://hdsky.me"
+      cookie: ""
+      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+  
+  # Gazelle类型站点
+  gazelle:
+    - name: "hdbits"
+      url: "https://hdbits.org"
+      cookie: ""
+      user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+# 下载器配置
+downloaders:
+  qbittorrent:
+    host: "localhost"
+    port: 8080
+    username: "admin"
+    password: "adminadmin"
+    enabled: true
+    
+  transmission:
+    host: "localhost"
+    port: 9091
+    username: ""
+    password: ""
+    enabled: false
+
+# 智能识别配置
+recognition:
+  # 发布组识别模式
+  release_groups:
+    - "CHD"
+    - "WiKi"
+    - "HDS"
+    - "CMCT"
+    - "FRDS"
+    - "BeAst"
+    - "WAF"
+    
+  # 视频编码识别
+  video_codecs:
+    - "H.264"
+    - "H.265"
+    - "AV1"
+    - "VP9"
+    
+  # 音频编码识别
+  audio_codecs:
+    - "DTS-HD MA"
+    - "TrueHD"
+    - "FLAC"
+    - "AC3"
+    - "AAC"
+
+# 自动下载规则
+auto_download_rules:
+  # 电影规则
+  movie:
+    min_size: "1GB"
+    max_size: "20GB"
+    quality: ["4K", "1080p", "720p"]
+    codec: ["H.265", "H.264"]
+    
+  # 电视剧规则
+  tv:
+    min_size: "500MB"
+    max_size: "5GB"
+    quality: ["1080p", "720p"]
+    codec: ["H.265", "H.264"]
+
+# 通知配置
+notifications:
+  telegram:
+    enabled: false
+    bot_token: ""
+    chat_id: ""
+    
+  discord:
+    enabled: false
+    webhook_url: ""
+    
+  email:
+    enabled: false
+    smtp_server: ""
+    smtp_port: 587
+    username: ""
+    password: ""
+    to_email: ""

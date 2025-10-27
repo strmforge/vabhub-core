@@ -1,0 +1,48 @@
+{
+  "storage_config": {
+    "u115": {
+      "client_id": "",
+      "client_secret": "",
+      "access_token": "",
+      "refresh_token": "",
+      "redirect_uri": "",
+      "enabled": false
+    },
+
+    "rclone": {
+      "remote_name": "remote",
+      "config_path": "",
+      "enabled": false
+    },
+    "alist": {
+      "base_url": "",
+      "username": "",
+      "password": "",
+      "enabled": false
+    },
+    "sync_rules": [
+      {
+        "name": "电影同步到115",
+        "source_storage": "local",
+        "source_path": "/movies",
+        "target_storage": "u115",
+        "target_path": "/电影",
+        "pattern": "*.mp4",
+        "recursive": true,
+        "operation": "copy",
+        "enabled": false
+      }
+    ],
+    "organize_rules": [
+      {
+        "name": "自动整理电影",
+        "storage": "u115",
+        "source_path": "/downloads",
+        "target_base_path": "/",
+        "pattern": "*.mp4",
+        "recursive": true,
+        "enabled": false
+      }
+    ]
+  }
+}

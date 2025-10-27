@@ -1,0 +1,103 @@
+# VabHub 库管理配置
+# 支持多库分离管理，模仿 MoviePilot 架构
+
+# 库配置列表
+libraries:
+  # 电影库
+  movie:
+    name: "电影库"
+    type: "movie"
+    path: "/data/movies"
+    enabled: true
+    auto_scan: true
+    scan_interval: 3600
+    rename_rules:
+      template: "{title} ({year})"
+      naming_convention: "Plex"
+    metadata_sources: ["tmdb", "douban"]
+    file_extensions: [".mp4", ".mkv", ".avi", ".mov"]
+    quality_weights:
+      resolution: 0.4
+      source: 0.3
+      codec: 0.2
+      audio: 0.1
+
+  # 电视剧库
+  tv:
+    name: "电视剧库"
+    type: "tv"
+    path: "/data/tv"
+    enabled: true
+    auto_scan: true
+    scan_interval: 3600
+    rename_rules:
+      template: "{title}/Season {season:02d}/{title} - S{season:02d}E{episode:02d}"
+      naming_convention: "Plex"
+    metadata_sources: ["tmdb", "douban"]
+    file_extensions: [".mp4", ".mkv", ".avi"]
+    episode_matching:
+      enable: true
+      strict_mode: false
+
+  # 音乐库
+  music:
+    name: "音乐库"
+    type: "music"
+    path: "/data/music"
+    enabled: false
+    auto_scan: false
+    scan_interval: 7200
+    rename_rules:
+      template: "{artist}/{album}/{track:02d} - {title}"
+      naming_convention: "Standard"
+    metadata_sources: ["musicbrainz"]
+    file_extensions: [".mp3", ".flac", ".wav", ".m4a"]
+
+  # 动漫库
+  anime:
+    name: "动漫库"
+    type: "anime"
+    path: "/data/anime"
+    enabled: false
+    auto_scan: false
+    scan_interval: 3600
+    rename_rules:
+      template: "{title}/Season {season:02d}/{title} - S{season:02d}E{episode:02d}"
+      naming_convention: "Anime"
+    metadata_sources: ["tmdb", "bangumi"]
+    file_extensions: [".mp4", ".mkv"]
+
+# 全局库设置
+global:
+  # 扫描设置
+  scan:
+    enable_auto_scan: true
+    scan_on_startup: true
+    concurrent_scans: 2
+    file_size_limit: "10GB"
+  
+  # 重命名设置
+  rename:
+    enable_preview: true
+    backup_original: true
+    dry_run_first: true
+  
+  # 元数据设置
+  metadata:
+    prefer_language: "zh-CN"
+    fallback_language: "en-US"
+    cache_duration: 86400
+  
+  # 通知设置
+  notify:
+    enable: false
+    webhook_url: ""
+    on_scan_complete: true
+    on_rename_complete: true
+
+# 库统计信息（自动生成）
+stats:
+  total_libraries: 4
+  enabled_libraries: 2
+  last_scan_time: null
+  total_files: 0

@@ -1,0 +1,193 @@
+# VabHub Core 版本配置文件
+
+version: "1.0.0"
+
+# 依赖关系配置
+dependencies: []
+
+# 变更日志配置
+changelog:
+  format: "keepachangelog"
+  categories:
+    - "Added"
+    - "Changed"
+    - "Fixed" 
+    - "Removed"
+    - "Security"
+
+# 发布配置
+release:
+  # 预发布标签
+  prerelease_tags:
+    - "alpha"
+    - "beta"
+    - "rc"
+  
+  # 版本分支策略
+  branches:
+    main: "稳定版本"
+    develop: "开发版本"
+    release: "发布准备"
+    hotfix: "紧急修复"
+
+# 版本兼容性规则
+compatibility:
+  # 向后兼容的版本范围
+  backward_compatible: ">=1.0.0"
+  
+  # 重大变更版本
+  breaking_changes: "2.0.0"
+
+# 包管理器配置
+package_managers:
+  pypi:
+    name: "vabhub-core"
+    description: "VabHub Core Backend Service"
+    classifiers:
+      - "Development Status :: 4 - Beta"
+      - "Intended Audience :: Developers"
+      - "License :: OSI Approved :: MIT License"
+      - "Programming Language :: Python :: 3"
+
+# 元数据
+metadata:
+  maintainers:
+    - "VabHub Team <team@vabhub.org>"
+  
+  repository:
+    type: "git"
+    url: "https://github.com/vabhub/vabhub-core.git"
+  
+  keywords:
+    - "media"
+    - "management"
+    - "fastapi"
+    - "python"
+    - "vabhub"
+
+# 构建配置
+build:
+  # Python 版本要求
+  python_requires: ">=3.8"
+  
+  # 包包含规则
+  packages: find:
+  include_package_data: true
+  
+  # 入口点配置
+  entry_points:
+    console_scripts:
+      - "vabhub-core = vabhub_core.cli:main"
+
+# 测试配置
+test:
+  # 测试框架
+  framework: "pytest"
+  
+  # 测试覆盖要求
+  coverage:
+    minimum: 80
+    
+  # 测试环境
+  environments:
+    - "python: 3.8"
+    - "python: 3.9"
+    - "python: 3.10"
+    - "python: 3.11"
+    - "python: 3.12"
+
+# 文档配置
+documentation:
+  # 文档格式
+  format: "markdown"
+  
+  # 文档目录
+  directories:
+    - "docs/"
+    - "README.md"
+  
+  # API 文档生成
+  api_docs:
+    enabled: true
+    tool: "sphinx"
+    output: "docs/api/"
+
+# 质量保证
+quality:
+  # 代码检查工具
+  linters:
+    - "black"
+    - "isort"
+    - "flake8"
+    - "mypy"
+  
+  # 代码质量要求
+  requirements:
+    complexity: "medium"
+    maintainability: "A"
+    security: "high"
+
+# 部署配置
+deployment:
+  # Docker 镜像配置
+  docker:
+    base_image: "python:3.11-slim"
+    ports:
+      - "8090"
+    
+  # 环境变量
+  environment:
+    required:
+      - "VABHUB_ENV"
+      - "DB_HOST"
+      - "DB_PORT"
+    
+    optional:
+      - "DEBUG"
+      - "LOG_LEVEL"
+
+# 监控和指标
+monitoring:
+  # 健康检查端点
+  health_check: "/api/health"
+  
+  # 指标端点
+  metrics: "/api/metrics"
+  
+  # 日志配置
+  logging:
+    level: "INFO"
+    format: "json"
+
+# 安全配置
+security:
+  # 依赖安全检查
+  dependency_check: true
+  
+  # 漏洞扫描
+  vulnerability_scan: true
+  
+  # 代码签名
+  code_signing: false
+
+# 支持信息
+support:
+  # 支持渠道
+  channels:
+    - "GitHub Issues"
+    - "Email"
+    - "Documentation"
+  
+  # 响应时间承诺
+  response_time:
+    critical: "2 hours"
+    high: "24 hours"
+    normal: "3 days"
+
+# 许可证信息
+license:
+  type: "MIT"
+  file: "LICENSE"
+  
+# 最后更新
+last_updated: "2025-10-26"

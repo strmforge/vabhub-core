@@ -1,0 +1,75 @@
+# MoviePilot PT站点管理器配置文件
+# 基于MoviePilot多年积累的PT站点支持经验
+
+# 站点配置示例
+sites:
+  # NexusPHP框架站点示例
+  m-team:
+    name: "M-Team"
+    url: "https://tp.m-team.cc"
+    schema: "NexusPhp"
+    cookie: "你的站点Cookie"
+    ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    proxy: false
+
+  # Gazelle框架站点示例  
+  hdbits:
+    name: "HDBits"
+    url: "https://hdbits.org"
+    schema: "Gazelle"
+    cookie: "你的站点Cookie"
+    ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    proxy: false
+
+  # Unit3D框架站点示例
+  blutopia:
+    name: "Blutopia"
+    url: "https://blutopia.xyz"
+    schema: "Unit3d"
+    cookie: "你的站点Cookie"
+    ua: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    proxy: false
+
+# 支持的站点框架列表
+supported_schemas:
+  - "NexusPhp"    # NexusPHP框架 (M-Team, TTG, PTHome等)
+  - "Gazelle"     # Gazelle框架 (HDBits, PTP, BTN等)
+  - "Unit3d"      # Unit3D框架 (Blutopia, Anthelion等)
+  - "DiscuzX"     # Discuz框架 (部分国内站点)
+  - "TorrentLeech" # TorrentLeech专用
+  - "FileList"    # FileList专用
+
+# 全局配置
+global:
+  # 刷新间隔(秒)
+  refresh_interval: 3600
+  # 并发请求数
+  max_concurrent: 5
+  # 超时时间(秒)
+  timeout: 30
+  # 启用代理
+  enable_proxy: false
+  # 代理地址
+  proxy_url: ""
+
+# 通知配置
+notifications:
+  # 启用低分享率警告
+  enable_low_ratio_warning: true
+  # 低分享率阈值
+  low_ratio_threshold: 1.0
+  # 启用未读消息通知
+  enable_message_notification: true
+  # 启用做种状态变化通知
+  enable_seeding_notification: true
+
+# 数据存储配置
+storage:
+  # 数据存储路径
+  data_path: "./data/pt_sites.json"
+  # 历史记录保留天数
+  history_days: 30
+  # 启用数据备份
+  enable_backup: true
+  # 备份间隔(小时)
+  backup_interval: 24

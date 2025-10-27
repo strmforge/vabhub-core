@@ -1,0 +1,91 @@
+# 文件分类规则
+rules:
+  # 视频文件分类
+  - name: "电影文件"
+    when:
+      ext_in: ["mp4", "mkv", "avi", "mov", "wmv", "flv", "webm"]
+      size_gt: "50MB"
+      path_not_contains: ["Season", "season", "S\\d+", "E\\d+"]
+    set:
+      kind: "movie"
+      tags: ["video", "movie"]
+      priority: 1
+
+  - name: "电视剧文件"
+    when:
+      ext_in: ["mp4", "mkv", "avi", "mov"]
+      path_contains: ["Season", "season", "S\\d+", "E\\d+"]
+      regex_match: "S\\d+E\\d+|Season\\s+\\d+|第\\d+季.*第\\d+集"
+    set:
+      kind: "tv"
+      tags: ["video", "tv"]
+      priority: 2
+
+  - name: "动画文件"
+    when:
+      ext_in: ["mp4", "mkv", "avi"]
+      path_contains: ["动画", "anime", "cartoon", "动漫"]
+    set:
+      kind: "anime"
+      tags: ["video", "anime"]
+      priority: 3
+
+  # 音乐文件分类
+  - name: "无损音乐"
+    when:
+      ext_in: ["flac", "wav", "ape", "wv"]
+      size_gt: "10MB"
+    set:
+      kind: "music"
+      tags: ["audio", "lossless"]
+      priority: 4
+
+  - name: "有损音乐"
+    when:
+      ext_in: ["mp3", "m4a", "aac", "ogg"]
+      size_lt: "50MB"
+    set:
+      kind: "music"
+      tags: ["audio", "lossy"]
+      priority: 5
+
+  # 字幕文件
+  - name: "字幕文件"
+    when:
+      ext_in: ["srt", "ass", "ssa", "vtt"]
+    set:
+      kind: "subtitle"
+      tags: ["subtitle"]
+      priority: 10
+
+  # 其他文件
+  - name: "文档文件"
+    when:
+      ext_in: ["txt", "pdf", "doc", "docx", "xls", "xlsx"]
+    set:
+      kind: "document"
+      tags: ["document"]
+      priority: 20
+
+# 特殊处理规则
+special_rules:
+  # 样本文件跳过
+  - name: "跳过样本文件"
+    when:
+      filename_contains: ["sample", "Sample", "SAMPLE"]
+      size_lt: "100MB"
+    action: "skip"
+    reason: "样本文件跳过处理"
+
+  # 压缩文件跳过
+  - name: "跳过压缩文件"
+    when:
+      ext_in: ["zip", "rar", "7z", "tar", "gz"]
+    action: "skip"
+    reason: "压缩文件跳过处理"
+
+# 默认分类
+default:
+  kind: "unknown"
+  tags: ["unknown"]
+  priority: 100
