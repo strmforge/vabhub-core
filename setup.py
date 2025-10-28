@@ -19,13 +19,9 @@ except ImportError:
 # 扩展模块配置
 extensions = [
     # 核心模块编译保护
-    *[f"VabHub-Core/core/{module}.py" for module in [
+    *[f"core/{module}.py" for module in [
         "config", "storage_115", "enhanced_error_handler"
-    ]],
-    # 前端模块
-    *[f"VabHub-Frontend/{module}.py" for module in [
-        "main", "components/storage"
-    ] if Path(f"VabHub-Frontend/{module}.py").exists()]
+    ] if Path(f"core/{module}.py").exists()]
 ]
 
 setup(
