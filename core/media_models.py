@@ -67,7 +67,7 @@ class MediaItem(Base):
     resolution = Column(String(50), nullable=True)
     tmdb_id = Column(Integer, nullable=True, index=True)
     imdb_id = Column(String(50), nullable=True, index=True)
-    metadata = Column(JSON, nullable=True)
+    meta_data = Column(JSON, nullable=True)
     tags = Column(JSON, nullable=True)  # 标签列表
     watched = Column(Boolean, default=False)
     favorite = Column(Boolean, default=False)
@@ -125,7 +125,7 @@ class TVSeason(Base):
     air_date = Column(DateTime, nullable=True)
     episode_count = Column(Integer, nullable=False, default=0)
     watched_episodes = Column(Integer, nullable=False, default=0)
-    metadata = Column(JSON, nullable=True)
+    meta_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -170,7 +170,7 @@ class TVEpisode(Base):
     resolution = Column(String(50), nullable=True)
     tmdb_id = Column(Integer, nullable=True)
     watched = Column(Boolean, default=False)
-    metadata = Column(JSON, nullable=True)
+    meta_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     

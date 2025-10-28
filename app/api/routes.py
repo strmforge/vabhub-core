@@ -20,6 +20,9 @@ from app.api.storage_routes import router as storage_router
 # 导入STRM路由
 from app.api.strm_routes import strm_router
 
+# 导入新的存储管理路由
+from app.storage_routes import router as new_storage_router
+
 # 创建API路由器
 api_router = APIRouter()
 
@@ -230,5 +233,5 @@ api_router.include_router(storage_router)
 # 包含STRM路由
 api_router.include_router(strm_router)
 
-# 包含STRM路由
-api_router.include_router(strm_router)
+# 包含新的存储管理路由
+api_router.include_router(new_storage_router, prefix="/v2")

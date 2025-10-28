@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 """
 增强版CookieCloud功能
-集成MoviePilot的CookieCloud精华功能
+集成MoviePilot的CookieCloud精华功能，支持站点资料维护与登录状态维护
+支持爬虫模式和RSS模式作为订阅来源
 """
 
 import asyncio

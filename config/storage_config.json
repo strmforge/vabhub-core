@@ -8,7 +8,13 @@
       "redirect_uri": "",
       "enabled": false
     },
-
+    "cloud123": {
+      "client_id": "",
+      "client_secret": "",
+      "access_token": "",
+      "refresh_token": "",
+      "enabled": false
+    },
     "rclone": {
       "remote_name": "remote",
       "config_path": "",

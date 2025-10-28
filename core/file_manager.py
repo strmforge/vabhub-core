@@ -1,464 +1,470 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-文件管理器核心模块
-基于MoviePilot的文件管理器架构设计
-支持多存储统一管理
+文件管理器主模块
+基于MoviePilot的最佳实践，实现智能重命名和媒体整理功能
 """
 
-import os
-import json
-import time
-import threading
+import re
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple, Callable, Union
-from enum import Enum
+from typing import Optional, List, Dict, Tuple, Callable, Any
+import logging
 
-from core.storage_base import StorageBase, FileItem, StorageUsage, StorageSchema, StorageManager
-
-
-class FileOperation(Enum):
-    """文件操作类型"""
-    COPY = "copy"
-    MOVE = "move"
-    RENAME = "rename"
-    DELETE = "delete"
-    UPLOAD = "upload"
-    DOWNLOAD = "download"
-
-
-class TransferStatus(Enum):
-    """传输状态"""
-    PENDING = "pending"
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-
-
-class TransferTask:
-    """传输任务"""
-    
-    def __init__(self, 
-                 task_id: str,
-                 operation: FileOperation,
-                 source_storage: str,
-                 source_path: str,
-                 target_storage: str,
-                 target_path: str,
-                 file_name: str,
-                 size: int = 0):
-        self.task_id = task_id
-        self.operation = operation
-        self.source_storage = source_storage
-        self.source_path = source_path
-        self.target_storage = target_storage
-        self.target_path = target_path
-        self.file_name = file_name
-        self.size = size
-        self.status = TransferStatus.PENDING
-        self.progress = 0
-        self.start_time = None
-        self.end_time = None
-        self.error_message = None
+from .storage_base import StorageBase
+from .storage_schemas import (
+    FileItem, StorageUsage, TransferInfo, TransferDirectoryConf,
+    MediaInfo, MetaInfo, ExistMediaInfo, TmdbEpisode, MediaType
+)
 
 
 class FileManager:
-    """文件管理器"""
+    """
+    文件管理器
+    负责媒体文件的智能重命名和整理
+    """
     
     def __init__(self):
-        self.storage_manager = StorageManager()
-        self.transfer_tasks = {}
-        self.task_lock = threading.Lock()
-        self.task_counter = 0
+        self.logger = logging.getLogger("file_manager")
         
-    def get_storage(self, storage_type: str) -> Optional[StorageBase]:
-        """获取存储适配器"""
-        return self.storage_manager.get_storage(storage_type)
-    
-    def list_storages(self) -> List[str]:
-        """列出可用的存储类型"""
-        return self.storage_manager.list_available_storages()
-    
-    def check_storage(self, storage_type: str) -> bool:
-        """检查存储是否可用"""
-        return self.storage_manager.check_storage_availability(storage_type)
-    
-    def list_files(self, storage_type: str, path: str = "") -> List[FileItem]:
-        """浏览文件列表"""
-        storage = self.get_storage(storage_type)
-        if not storage:
-            return []
+        # 媒体文件扩展名
+        self.media_extensions = [
+            '.mp4', '.mkv', '.avi', '.mov', '.wmv', '.flv', '.webm',
+            '.m4v', '.ts', '.m2ts', '.mpg', '.mpeg', '.vob', '.iso'
+        ]
         
-        fileitem = FileItem(
-            name=Path(path).name if path else "",
-            path=path,
-            type="folder",
-            is_dir=True
-        )
+        # 字幕文件扩展名
+        self.subtitle_extensions = [
+            '.srt', '.ass', '.ssa', '.sub', '.vtt', '.smi'
+        ]
         
-        return storage.list(fileitem)
+        # 音频轨道扩展名
+        self.audio_extensions = [
+            '.ac3', '.dts', '.aac', '.mp3', '.flac', '.wav', '.ogg'
+        ]
+        
+        # 重命名模板
+        self.rename_templates = {
+            MediaType.MOVIE: "{title} ({year})/{title} ({year}){quality}",
+            MediaType.TV: "{title} ({year})/Season {season:02d}/{title} - S{season:02d}E{episode:02d} - {episode_name}{quality}",
+            MediaType.ANIME: "{title} ({year})/Season {season:02d}/{title} - S{season:02d}E{episode:02d} - {episode_name}{quality}",
+            MediaType.DOCUMENTARY: "{title} ({year})/{title} ({year}){quality}",
+            MediaType.VARIETY: "{title} ({year})/Season {season:02d}/{title} - S{season:02d}E{episode:02d}{quality}"
+        }
     
-    def create_folder(self, storage_type: str, path: str, name: str) -> Optional[FileItem]:
-        """创建目录"""
-        storage = self.get_storage(storage_type)
-        if not storage:
+    def recommend_name(self, meta: MetaInfo, mediainfo: MediaInfo) -> Optional[str]:
+        """
+        获取重命名后的名称
+        :param meta: 元数据
+        :param mediainfo: 媒体信息
+        :return: 重命名后的名称（含目录）
+        """
+        try:
+            # 获取重命名模板
+            template = self.rename_templates.get(mediainfo.type, self.rename_templates[MediaType.MOVIE])
+            
+            # 构建重命名字典
+            rename_dict = self._get_naming_dict(meta, mediainfo)
+            
+            # 应用模板
+            renamed_path = template.format(**rename_dict)
+            
+            # 清理路径中的非法字符
+            renamed_path = self._clean_path(renamed_path)
+            
+            return renamed_path
+            
+        except Exception as e:
+            self.logger.error(f"生成重命名路径失败: {e}")
+            return None
+    
+    def _get_naming_dict(self, meta: MetaInfo, mediainfo: MediaInfo) -> Dict[str, Any]:
+        """
+        获取重命名字典
+        """
+        # 基础信息
+        naming_dict = {
+            "title": mediainfo.title or meta.title,
+            "year": mediainfo.year or meta.year or "",
+            "season": mediainfo.season or meta.season or 1,
+            "episode": mediainfo.episode or meta.episode or 1,
+            "episode_name": "",  # 需要从TMDB获取
+            "quality": "",  # 需要从文件名识别
+            "video_codec": "",
+            "audio_codec": "",
+            "group": ""
+        }
+        
+        # 处理年份
+        if naming_dict["year"]:
+            naming_dict["year"] = f"({naming_dict['year']})"
+        
+        # 处理季集格式
+        if mediainfo.type in [MediaType.TV, MediaType.ANIME, MediaType.VARIETY]:
+            naming_dict["season"] = int(naming_dict["season"])
+            naming_dict["episode"] = int(naming_dict["episode"])
+        
+        return naming_dict
+    
+    def _clean_path(self, path: str) -> str:
+        """
+        清理路径中的非法字符
+        """
+        # Windows非法字符
+        illegal_chars = r'[<>:"/\\|?*]'
+        path = re.sub(illegal_chars, '_', path)
+        
+        # 清理连续的下划线
+        path = re.sub(r'_+', '_', path)
+        
+        # 清理开头和结尾的下划线
+        path = path.strip('_')
+        
+        return path
+    
+    def transfer_media(
+        self,
+        fileitem: FileItem,
+        meta: MetaInfo,
+        mediainfo: MediaInfo,
+        target_directory: TransferDirectoryConf,
+        target_storage: Optional[str] = None,
+        target_path: Optional[Path] = None,
+        transfer_type: Optional[str] = None,
+        scrape: Optional[bool] = None,
+        library_type_folder: Optional[bool] = None,
+        library_category_folder: Optional[bool] = None,
+        episodes_info: List[TmdbEpisode] = None,
+        source_oper: Callable = None,
+        target_oper: Callable = None
+    ) -> TransferInfo:
+        """
+        文件整理
+        :param fileitem: 文件信息
+        :param meta: 预识别的元数据
+        :param mediainfo: 识别的媒体信息
+        :param target_directory: 目标目录配置
+        :param target_storage: 目标存储
+        :param target_path: 目标路径
+        :param transfer_type: 转移模式
+        :param scrape: 是否刮削元数据
+        :param library_type_folder: 是否按媒体类型创建目录
+        :param library_category_folder: 是否按媒体类别创建目录
+        :param episodes_info: 当前季的全部集信息
+        :param source_oper: 源存储操作对象
+        :param target_oper: 目标存储操作对象
+        :return: 传输信息
+        """
+        try:
+            # 检查源文件
+            if fileitem.storage == "local" and not Path(fileitem.path).exists():
+                return TransferInfo(
+                    success=False,
+                    message=f"{fileitem.path} 不存在",
+                    fileitem=fileitem
+                )
+            
+            # 获取目标路径
+            if target_directory:
+                # 检查目标目录配置
+                if not target_directory.library_path:
+                    return TransferInfo(
+                        success=False,
+                        message="目标媒体库目录未设置",
+                        fileitem=fileitem
+                    )
+                
+                # 设置传输类型
+                if not transfer_type:
+                    transfer_type = target_directory.transfer_type
+                
+                # 设置目标存储
+                if not target_storage:
+                    target_storage = target_directory.library_storage
+                
+                # 构建目标路径
+                target_path = self._get_dest_path(
+                    mediainfo=mediainfo,
+                    target_dir=target_directory,
+                    need_type_folder=library_type_folder,
+                    need_category_folder=library_category_folder
+                )
+            
+            elif target_path:
+                # 手动整理模式
+                if not transfer_type:
+                    transfer_type = "move"
+                
+                if not target_storage:
+                    target_storage = fileitem.storage
+                
+                target_path = self._get_dest_path(
+                    mediainfo=mediainfo,
+                    target_path=target_path,
+                    need_type_folder=library_type_folder,
+                    need_category_folder=library_category_folder
+                )
+            
+            else:
+                return TransferInfo(
+                    success=False,
+                    message="未找到有效的媒体库目录",
+                    fileitem=fileitem
+                )
+            
+            # 检查传输类型支持
+            if not self._check_transfer_type_support(fileitem.storage, target_storage, transfer_type):
+                return TransferInfo(
+                    success=False,
+                    message=f"不支持的传输类型: {transfer_type}",
+                    fileitem=fileitem
+                )
+            
+            # 执行文件传输
+            return self._execute_transfer(
+                fileitem=fileitem,
+                target_storage=target_storage,
+                target_path=target_path,
+                transfer_type=transfer_type,
+                source_oper=source_oper,
+                target_oper=target_oper
+            )
+            
+        except Exception as e:
+            self.logger.error(f"文件整理失败: {e}")
+            return TransferInfo(
+                success=False,
+                message=str(e),
+                fileitem=fileitem
+            )
+    
+    def _get_dest_path(
+        self,
+        mediainfo: MediaInfo,
+        target_dir: Optional[TransferDirectoryConf] = None,
+        target_path: Optional[Path] = None,
+        need_type_folder: Optional[bool] = None,
+        need_category_folder: Optional[bool] = None
+    ) -> Path:
+        """
+        获取目标路径
+        """
+        if target_dir:
+            # 基于目录配置构建路径
+            base_path = Path(target_dir.library_path)
+            
+            # 按媒体类型创建目录
+            if need_type_folder or target_dir.renaming:
+                base_path = base_path / mediainfo.type.value
+            
+            # 按分类创建目录（需要额外的分类信息）
+            if need_category_folder and mediainfo.type == MediaType.TV:
+                # 这里可以根据剧集类型进一步分类
+                base_path = base_path / "TV Shows"
+            elif need_category_folder and mediainfo.type == MediaType.MOVIE:
+                base_path = base_path / "Movies"
+            
+            # 应用重命名
+            if target_dir.renaming:
+                renamed_name = self.recommend_name(MetaInfo(title=mediainfo.title), mediainfo)
+                if renamed_name:
+                    base_path = base_path / renamed_name
+            
+            return base_path
+        
+        elif target_path:
+            # 直接使用提供的路径
+            return target_path
+        
+        else:
+            raise ValueError("必须提供目标目录配置或目标路径")
+    
+    def _check_transfer_type_support(self, source_storage: str, target_storage: str, transfer_type: str) -> bool:
+        """
+        检查传输类型是否支持
+        """
+        # 本地到本地：支持所有传输类型
+        if source_storage == "local" and target_storage == "local":
+            return transfer_type in ["copy", "move", "link", "softlink"]
+        
+        # 本地到网盘或网盘到本地：只支持复制和移动
+        elif source_storage == "local" and target_storage != "local":
+            return transfer_type in ["copy", "move"]
+        
+        # 网盘到网盘：只支持复制和移动
+        elif source_storage != "local" and target_storage != "local":
+            return transfer_type in ["copy", "move"]
+        
+        # 网盘到本地：只支持复制和移动
+        else:
+            return transfer_type in ["copy", "move"]
+    
+    def _execute_transfer(
+        self,
+        fileitem: FileItem,
+        target_storage: str,
+        target_path: Path,
+        transfer_type: str,
+        source_oper: Callable,
+        target_oper: Callable
+    ) -> TransferInfo:
+        """
+        执行文件传输
+        """
+        try:
+            # 获取源操作对象
+            if not source_oper:
+                source_oper = self._get_storage_oper(fileitem.storage)
+            
+            if not source_oper:
+                return TransferInfo(
+                    success=False,
+                    message=f"不支持的存储类型: {fileitem.storage}",
+                    fileitem=fileitem
+                )
+            
+            # 获取目标操作对象
+            if not target_oper:
+                target_oper = self._get_storage_oper(target_storage)
+            
+            if not target_oper:
+                return TransferInfo(
+                    success=False,
+                    message=f"不支持的存储类型: {target_storage}",
+                    fileitem=fileitem
+                )
+            
+            # 执行传输
+            if transfer_type == "copy":
+                success = source_oper.copy(fileitem, target_path, fileitem.name)
+            elif transfer_type == "move":
+                success = source_oper.move(fileitem, target_path, fileitem.name)
+            elif transfer_type == "link":
+                success = source_oper.link(fileitem, target_path / fileitem.name)
+            elif transfer_type == "softlink":
+                success = source_oper.softlink(fileitem, target_path / fileitem.name)
+            else:
+                return TransferInfo(
+                    success=False,
+                    message=f"不支持的传输类型: {transfer_type}",
+                    fileitem=fileitem
+                )
+            
+            if success:
+                return TransferInfo(
+                    success=True,
+                    message=f"文件{transfer_type}成功",
+                    fileitem=fileitem,
+                    transfer_type=transfer_type,
+                    file_count=1
+                )
+            else:
+                return TransferInfo(
+                    success=False,
+                    message=f"文件{transfer_type}失败",
+                    fileitem=fileitem,
+                    transfer_type=transfer_type
+                )
+            
+        except Exception as e:
+            self.logger.error(f"执行传输失败: {e}")
+            return TransferInfo(
+                success=False,
+                message=str(e),
+                fileitem=fileitem,
+                transfer_type=transfer_type
+            )
+    
+    def _get_storage_oper(self, storage_type: str) -> Optional[StorageBase]:
+        """
+        获取存储操作对象
+        """
+        # 这里需要实现存储管理器的获取逻辑
+        # 简化实现：根据存储类型返回对应的操作对象
+        if storage_type == "local":
+            from .storage_local import LocalStorage
+            return LocalStorage()
+        elif storage_type == "cloud_123":
+            from .storage_123 import Cloud123Storage
+            return Cloud123Storage()
+        elif storage_type == "cloud_115":
+            # 115网盘存储
+            # from .storage_115 import Cloud115Storage
+            # return Cloud115Storage()
+            pass
+        
+        return None
+    
+    def media_files(self, mediainfo: MediaInfo) -> List[FileItem]:
+        """
+        获取对应媒体的媒体库文件列表
+        :param mediainfo: 媒体信息
+        """
+        ret_fileitems = []
+        
+        # 这里需要实现媒体库扫描逻辑
+        # 简化实现：返回空列表
+        
+        return ret_fileitems
+    
+    def media_exists(self, mediainfo: MediaInfo, **kwargs) -> Optional[ExistMediaInfo]:
+        """
+        判断媒体文件是否存在于文件系统
+        :param mediainfo: 识别的媒体信息
+        :return: 如不存在返回None，存在时返回信息
+        """
+        # 检查媒体库
+        fileitems = self.media_files(mediainfo)
+        if not fileitems:
             return None
         
-        fileitem = FileItem(
-            name=Path(path).name if path else "",
-            path=path,
-            type="folder",
-            is_dir=True
-        )
-        
-        return storage.create_folder(fileitem, name)
-    
-    def delete_file(self, storage_type: str, file_path: str) -> bool:
-        """删除文件"""
-        storage = self.get_storage(storage_type)
-        if not storage:
-            return False
-        
-        fileitem = FileItem(
-            name=Path(file_path).name,
-            path=file_path,
-            type="file",
-            is_dir=False
-        )
-        
-        return storage.delete(fileitem)
-    
-    def rename_file(self, storage_type: str, file_path: str, new_name: str) -> bool:
-        """重命名文件"""
-        storage = self.get_storage(storage_type)
-        if not storage:
-            return False
-        
-        fileitem = FileItem(
-            name=Path(file_path).name,
-            path=file_path,
-            type="file",
-            is_dir=False
-        )
-        
-        return storage.rename(fileitem, new_name)
-    
-    def copy_file(self, 
-                  source_storage: str, 
-                  source_path: str,
-                  target_storage: str,
-                  target_path: str,
-                  new_name: str = None) -> str:
-        """复制文件"""
-        task_id = self._generate_task_id()
-        
-        source_file = Path(source_path)
-        target_name = new_name or source_file.name
-        
-        task = TransferTask(
-            task_id=task_id,
-            operation=FileOperation.COPY,
-            source_storage=source_storage,
-            source_path=source_path,
-            target_storage=target_storage,
-            target_path=target_path,
-            file_name=target_name
-        )
-        
-        self._add_task(task)
-        self._start_transfer_task(task)
-        
-        return task_id
-    
-    def move_file(self, 
-                  source_storage: str, 
-                  source_path: str,
-                  target_storage: str,
-                  target_path: str,
-                  new_name: str = None) -> str:
-        """移动文件"""
-        task_id = self._generate_task_id()
-        
-        source_file = Path(source_path)
-        target_name = new_name or source_file.name
-        
-        task = TransferTask(
-            task_id=task_id,
-            operation=FileOperation.MOVE,
-            source_storage=source_storage,
-            source_path=source_path,
-            target_storage=target_storage,
-            target_path=target_path,
-            file_name=target_name
-        )
-        
-        self._add_task(task)
-        self._start_transfer_task(task)
-        
-        return task_id
-    
-    def upload_file(self, 
-                    local_path: str,
-                    target_storage: str,
-                    target_path: str,
-                    new_name: str = None) -> str:
-        """上传文件"""
-        task_id = self._generate_task_id()
-        
-        local_file = Path(local_path)
-        target_name = new_name or local_file.name
-        
-        task = TransferTask(
-            task_id=task_id,
-            operation=FileOperation.UPLOAD,
-            source_storage="local",
-            source_path=local_path,
-            target_storage=target_storage,
-            target_path=target_path,
-            file_name=target_name,
-            size=local_file.stat().st_size
-        )
-        
-        self._add_task(task)
-        self._start_transfer_task(task)
-        
-        return task_id
-    
-    def download_file(self, 
-                      source_storage: str,
-                      source_path: str,
-                      local_path: str,
-                      new_name: str = None) -> str:
-        """下载文件"""
-        task_id = self._generate_task_id()
-        
-        source_file = Path(source_path)
-        local_name = new_name or source_file.name
-        local_target = Path(local_path) / local_name
-        
-        task = TransferTask(
-            task_id=task_id,
-            operation=FileOperation.DOWNLOAD,
-            source_storage=source_storage,
-            source_path=source_path,
-            target_storage="local",
-            target_path=str(local_target.parent),
-            file_name=local_name
-        )
-        
-        self._add_task(task)
-        self._start_transfer_task(task)
-        
-        return task_id
-    
-    def get_task_status(self, task_id: str) -> Optional[TransferTask]:
-        """获取任务状态"""
-        with self.task_lock:
-            return self.transfer_tasks.get(task_id)
-    
-    def cancel_task(self, task_id: str) -> bool:
-        """取消任务"""
-        with self.task_lock:
-            task = self.transfer_tasks.get(task_id)
-            if task and task.status == TransferStatus.RUNNING:
-                task.status = TransferStatus.CANCELLED
-                task.end_time = time.time()
-                return True
-        return False
-    
-    def list_tasks(self) -> List[TransferTask]:
-        """列出所有任务"""
-        with self.task_lock:
-            return list(self.transfer_tasks.values())
-    
-    def _generate_task_id(self) -> str:
-        """生成任务ID"""
-        with self.task_lock:
-            self.task_counter += 1
-            return f"task_{self.task_counter}_{int(time.time())}"
-    
-    def _add_task(self, task: TransferTask):
-        """添加任务"""
-        with self.task_lock:
-            self.transfer_tasks[task.task_id] = task
-    
-    def _start_transfer_task(self, task: TransferTask):
-        """启动传输任务"""
-        def _run_task():
-            task.status = TransferStatus.RUNNING
-            task.start_time = time.time()
-            
-            try:
-                if task.operation == FileOperation.COPY:
-                    self._execute_copy(task)
-                elif task.operation == FileOperation.MOVE:
-                    self._execute_move(task)
-                elif task.operation == FileOperation.UPLOAD:
-                    self._execute_upload(task)
-                elif task.operation == FileOperation.DOWNLOAD:
-                    self._execute_download(task)
-                
-                if task.status != TransferStatus.CANCELLED:
-                    task.status = TransferStatus.COMPLETED
-                    task.progress = 100
-                
-            except Exception as e:
-                task.status = TransferStatus.FAILED
-                task.error_message = str(e)
-            
-            task.end_time = time.time()
-        
-        # 在后台线程中执行任务
-        thread = threading.Thread(target=_run_task)
-        thread.daemon = True
-        thread.start()
-    
-    def _execute_copy(self, task: TransferTask):
-        """执行复制操作"""
-        source_storage = self.get_storage(task.source_storage)
-        target_storage = self.get_storage(task.target_storage)
-        
-        if not source_storage or not target_storage:
-            raise Exception("存储不可用")
-        
-        # 获取源文件信息
-        source_file = FileItem(
-            name=Path(task.source_path).name,
-            path=task.source_path,
-            type="file",
-            is_dir=False
-        )
-        
-        # 创建目标目录
-        target_folder = target_storage.get_folder(Path(task.target_path))
-        if not target_folder:
-            raise Exception("无法创建目标目录")
-        
-        # 执行复制
-        if not source_storage.copy(source_file, Path(task.target_path), task.file_name):
-            raise Exception("复制失败")
-    
-    def _execute_move(self, task: TransferTask):
-        """执行移动操作"""
-        source_storage = self.get_storage(task.source_storage)
-        target_storage = self.get_storage(task.target_storage)
-        
-        if not source_storage or not target_storage:
-            raise Exception("存储不可用")
-        
-        # 获取源文件信息
-        source_file = FileItem(
-            name=Path(task.source_path).name,
-            path=task.source_path,
-            type="file",
-            is_dir=False
-        )
-        
-        # 创建目标目录
-        target_folder = target_storage.get_folder(Path(task.target_path))
-        if not target_folder:
-            raise Exception("无法创建目标目录")
-        
-        # 执行移动
-        if not source_storage.move(source_file, Path(task.target_path), task.file_name):
-            raise Exception("移动失败")
-    
-    def _execute_upload(self, task: TransferTask):
-        """执行上传操作"""
-        target_storage = self.get_storage(task.target_storage)
-        
-        if not target_storage:
-            raise Exception("目标存储不可用")
-        
-        # 检查本地文件
-        local_path = Path(task.source_path)
-        if not local_path.exists():
-            raise Exception("本地文件不存在")
-        
-        # 创建目标目录
-        target_folder = target_storage.get_folder(Path(task.target_path))
-        if not target_folder:
-            raise Exception("无法创建目标目录")
-        
-        # 执行上传
-        uploaded_file = target_storage.upload(target_folder, local_path, task.file_name)
-        if not uploaded_file:
-            raise Exception("上传失败")
-    
-    def _execute_download(self, task: TransferTask):
-        """执行下载操作"""
-        source_storage = self.get_storage(task.source_storage)
-        
-        if not source_storage:
-            raise Exception("源存储不可用")
-        
-        # 检查目标目录
-        local_dir = Path(task.target_path)
-        if not local_dir.exists():
-            local_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 获取源文件信息
-        source_file = FileItem(
-            name=Path(task.source_path).name,
-            path=task.source_path,
-            type="file",
-            is_dir=False
-        )
-        
-        # 执行下载
-        local_path = source_storage.download(source_file, local_dir / task.file_name)
-        if not local_path:
-            raise Exception("下载失败")
-
-
-class MediaClassifier:
-    """媒体文件分类器"""
-    
-    def __init__(self):
-        self.movie_patterns = [
-            r'^.*\.(mp4|mkv|avi|mov|wmv|flv|webm|m4v)$',
-            r'^.*[Ss]\d+[Ee]\d+.*$'
-        ]
-        self.tv_patterns = [
-            r'^.*[Ss]\d+.*$',
-            r'^.*\sSeason\s\d+.*$'
-        ]
-        self.anime_patterns = [
-            r'^.*\[.*\].*$',
-            r'^.*\d{2,4}.*$'
-        ]
-    
-    def classify_file(self, file_name: str) -> str:
-        """分类文件"""
-        import re
-        
-        # 检查电影模式
-        for pattern in self.movie_patterns:
-            if re.match(pattern, file_name, re.IGNORECASE):
-                return "movie"
-        
-        # 检查电视剧模式
-        for pattern in self.tv_patterns:
-            if re.match(pattern, file_name, re.IGNORECASE):
-                return "tv"
-        
-        # 检查动漫模式
-        for pattern in self.anime_patterns:
-            if re.match(pattern, file_name, re.IGNORECASE):
-                return "anime"
-        
-        return "other"
-    
-    def get_target_folder(self, file_name: str, base_path: str = "") -> str:
-        """获取目标文件夹路径"""
-        file_type = self.classify_file(file_name)
-        
-        if file_type == "movie":
-            return f"{base_path}/电影".lstrip('/')
-        elif file_type == "tv":
-            return f"{base_path}/电视剧".lstrip('/')
-        elif file_type == "anime":
-            return f"{base_path}/动漫".lstrip('/')
+        if mediainfo.type == MediaType.MOVIE:
+            # 电影存在任何文件为存在
+            return ExistMediaInfo(type=MediaType.MOVIE)
         else:
-            return f"{base_path}/其他".lstrip('/')
+            # 电视剧检索集数
+            seasons: Dict[int, List[int]] = {}
+            
+            for fileitem in fileitems:
+                # 解析文件名获取季集信息
+                file_meta = self._parse_filename(fileitem.name)
+                season_index = file_meta.season or 1
+                episode_index = file_meta.episode
+                
+                if not episode_index:
+                    continue
+                
+                if season_index not in seasons:
+                    seasons[season_index] = []
+                
+                if episode_index not in seasons[season_index]:
+                    seasons[season_index].append(episode_index)
+            
+            return ExistMediaInfo(type=MediaType.TV, seasons=seasons)
+    
+    def _parse_filename(self, filename: str) -> MetaInfo:
+        """
+        解析文件名获取元数据
+        """
+        # 简化实现：基本文件名解析
+        meta = MetaInfo(title=filename)
+        
+        # 尝试从文件名中提取季集信息
+        # 例如：S01E01, S1E1, 第1季第1集等
+        season_episode_patterns = [
+            r'[Ss](\d+)[Ee](\d+)',  # S01E01
+            r'第(\d+)季.*第(\d+)集',  # 第1季第1集
+            r'Season(\d+).*Episode(\d+)',  # Season1Episode1
+        ]
+        
+        for pattern in season_episode_patterns:
+            match = re.search(pattern, filename)
+            if match:
+                meta.season = int(match.group(1))
+                meta.episode = int(match.group(2))
+                meta.type = MediaType.TV
+                break
+        
+        # 尝试提取年份
+        year_match = re.search(r'\((\d{4})\)', filename)
+        if year_match:
+            meta.year = year_match.group(1)
+        
+        return meta

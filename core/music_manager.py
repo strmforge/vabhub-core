@@ -1,365 +1,264 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 """
-音乐库管理器
-智能音乐文件识别、分类和管理
+音乐管理模块 - 集成ptmusic-sub v2功能
+基于VabHub架构设计的音乐订阅和元数据管理系统
 """
 
 import os
 import json
 import asyncio
-from typing import Dict, List, Any, Optional
+import logging
+from typing import List, Dict, Any, Optional
 from pathlib import Path
-import mutagen
-from mutagen.easyid3 import EasyID3
-from mutagen.mp3 import MP3
-from mutagen.flac import FLAC
-from mutagen.oggvorbis import OggVorbis
+from datetime import datetime
 
-from core.config import settings
+from .database import DatabaseManager
+from .event import EventManager, EventType
+from .config import ConfigManager
 
 
 class MusicManager:
-    """音乐库管理器"""
+    """音乐管理器 - 核心业务逻辑"""
     
-    def __init__(self):
-        self.supported_formats = ['.mp3', '.flac', '.wav', '.ogg', '.m4a', '.aac']
-        self.artist_database = {}
-        self.album_database = {}
-        self.playlist_database = {}
+    def __init__(self, config: ConfigManager):
+        self.config = config
+        self.logger = logging.getLogger(__name__)
+        self.db = DatabaseManager()
+        self.event_manager = EventManager()
         
-        self._load_music_database()
-    
-    def _load_music_database(self):
-        """加载音乐数据库"""
+        # 音乐订阅配置
+        self.subscriptions = {}
+        self.metadata_providers = {}
+        
+    async def initialize(self) -> bool:
+        """初始化音乐管理器"""
         try:
-            with open('music_database.json', 'r', encoding='utf-8') as f:
-                data = json.load(f)
-                self.artist_database = data.get('artists', {})
-                self.album_database = data.get('albums', {})
-                self.playlist_database = data.get('playlists', {})
-        except:
-            pass
-    
-    def _save_music_database(self):
-        """保存音乐数据库"""
-        data = {
-            'artists': self.artist_database,
-            'albums': self.album_database,
-            'playlists': self.playlist_database
-        }
-        try:
-            with open('music_database.json', 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-        except:
-            pass
-    
-    async def analyze_music_file(self, file_path: str) -> Dict[str, Any]:
-        """分析音乐文件"""
-        try:
-            file_path = Path(file_path)
-            if file_path.suffix.lower() not in self.supported_formats:
-                return {"error": "不支持的音频格式"}
+            # 加载订阅配置
+            await self._load_subscriptions()
             
-            # 读取音频元数据
-            metadata = await self._extract_metadata(file_path)
+            # 初始化元数据提供者
+            await self._init_metadata_providers()
             
-            # 智能识别艺术家和专辑
-            enhanced_metadata = await self._enhance_with_ai(metadata, file_path)
-            
-            # 更新音乐数据库
-            await self._update_music_database(enhanced_metadata)
-            
-            return enhanced_metadata
+            self.logger.info("音乐管理器初始化完成")
+            return True
             
         except Exception as e:
-            return {"error": f"音乐文件分析失败: {str(e)}"}
+            self.logger.error(f"音乐管理器初始化失败: {e}")
+            return False
     
-    async def _extract_metadata(self, file_path: Path) -> Dict[str, Any]:
-        """提取音频元数据"""
-        try:
-            # 根据文件格式使用不同的解析器
-            if file_path.suffix.lower() == '.mp3':
-                audio = MP3(file_path, ID3=EasyID3)
-            elif file_path.suffix.lower() == '.flac':
-                audio = FLAC(file_path)
-            elif file_path.suffix.lower() == '.ogg':
-                audio = OggVorbis(file_path)
-            else:
-                audio = mutagen.File(file_path)
-            
-            metadata = {
-                'file_path': str(file_path),
-                'file_name': file_path.name,
-                'file_size': file_path.stat().st_size,
-                'format': file_path.suffix.lower(),
-                'duration': audio.info.length if audio else 0,
-                'bitrate': audio.info.bitrate if audio else 0,
-                'sample_rate': audio.info.sample_rate if audio else 0
-            }
-            
-            # 提取ID3标签
-            if audio and hasattr(audio, 'tags'):
-                tags = audio.tags
-                if tags:
-                    metadata.update({
-                        'title': tags.get('title', [''])[0] if tags.get('title') else '',
-                        'artist': tags.get('artist', [''])[0] if tags.get('artist') else '',
-                        'album': tags.get('album', [''])[0] if tags.get('album') else '',
-                        'genre': tags.get('genre', [''])[0] if tags.get('genre') else '',
-                        'year': tags.get('date', [''])[0] if tags.get('date') else '',
-                        'track_number': tags.get('tracknumber', [''])[0] if tags.get('tracknumber') else '',
-                        'album_artist': tags.get('albumartist', [''])[0] if tags.get('albumartist') else ''
-                    })
-            
-            return metadata
-            
-        except Exception as e:
-            return {"error": f"元数据提取失败: {str(e)}"}
+    async def _load_subscriptions(self):
+        """加载音乐订阅配置"""
+        subscriptions_config = self.config.get('music.subscriptions', {})
+        
+        for sub_name, sub_config in subscriptions_config.items():
+            self.subscriptions[sub_name] = MusicSubscription(sub_name, sub_config)
     
-    async def _enhance_with_ai(self, metadata: Dict[str, Any], file_path: Path) -> Dict[str, Any]:
-        """使用AI增强音乐识别"""
-        # 这里可以集成音乐识别API，如Shazam、AcoustID等
+    async def _init_metadata_providers(self):
+        """初始化元数据提供者"""
+        # iTunes封面提供者
+        self.metadata_providers['itunes'] = ITunesMetadataProvider()
         
-        enhanced = metadata.copy()
+        # MusicBrainz录音信息提供者
+        self.metadata_providers['musicbrainz'] = MusicBrainzProvider()
         
-        # 智能填充缺失信息
-        if not enhanced.get('artist') and enhanced.get('file_name'):
-            enhanced['artist'] = self._guess_artist_from_filename(enhanced['file_name'])
-        
-        if not enhanced.get('title') and enhanced.get('file_name'):
-            enhanced['title'] = self._guess_title_from_filename(enhanced['file_name'])
-        
-        if not enhanced.get('genre'):
-            enhanced['genre'] = self._classify_genre(enhanced)
-        
-        # 音乐质量评估
-        enhanced['quality_score'] = self._assess_audio_quality(enhanced)
-        
-        # 相似艺术家推荐
-        enhanced['similar_artists'] = self._get_similar_artists(enhanced.get('artist', ''))
-        
-        return enhanced
+        # LRCLIB歌词提供者
+        self.metadata_providers['lyrics'] = LRCLibLyricsProvider()
     
-    def _guess_artist_from_filename(self, filename: str) -> str:
-        """从文件名猜测艺术家"""
-        # 常见的文件名模式：艺术家 - 歌曲名
-        if ' - ' in filename:
-            parts = filename.split(' - ')
-            if len(parts) >= 2:
-                return parts[0].strip()
+    async def search_music(self, query: str, filters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+        """搜索音乐 - 集成Torznab和RSS搜索"""
+        results = []
         
-        # 其他模式处理
-        filename = Path(filename).stem  # 移除扩展名
+        # 并行搜索所有订阅源
+        tasks = []
+        for subscription in self.subscriptions.values():
+            task = subscription.search(query, filters)
+            tasks.append(task)
         
-        # 尝试提取艺术家信息
-        for separator in ['_', '.', '~']:
-            if separator in filename:
-                parts = filename.split(separator)
-                if len(parts) >= 2:
-                    return parts[0].strip()
+        search_results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        return "未知艺术家"
-    
-    def _guess_title_from_filename(self, filename: str) -> str:
-        """从文件名猜测歌曲标题"""
-        filename = Path(filename).stem  # 移除扩展名
+        for result in search_results:
+            if isinstance(result, Exception):
+                self.logger.error(f"搜索失败: {result}")
+                continue
+            results.extend(result)
         
-        if ' - ' in filename:
-            parts = filename.split(' - ')
-            if len(parts) >= 2:
-                return parts[1].strip()
+        # 去重和排序
+        results = self._deduplicate_and_sort(results, filters)
         
-        # 移除常见的数字前缀（如01、02等）
-        import re
-        filename = re.sub(r'^\d+\s*[-_\s]*', '', filename)
-        
-        return filename.strip()
-    
-    def _classify_genre(self, metadata: Dict[str, Any]) -> str:
-        """分类音乐流派"""
-        # 基于文件名和元数据的简单分类
-        filename = metadata.get('file_name', '').lower()
-        artist = metadata.get('artist', '').lower()
-        
-        # 基于关键词的流派分类
-        genre_keywords = {
-            'pop': ['pop', '流行'],
-            'rock': ['rock', '摇滚'],
-            'jazz': ['jazz', '爵士'],
-            'classical': ['classical', 'classic', '古典'],
-            'electronic': ['electronic', 'edm', '电子', '电音'],
-            'hiphop': ['hiphop', 'rap', '嘻哈'],
-            'country': ['country', '乡村'],
-            'folk': ['folk', '民谣'],
-            'r&b': ['r&b', 'rb', '节奏布鲁斯']
+        # 触发搜索完成事件
+        event_data = {
+            'query': query,
+            'results_count': len(results),
+            'filters': filters
         }
-        
-        for genre, keywords in genre_keywords.items():
-            if any(keyword in filename or keyword in artist for keyword in keywords):
-                return genre
-        
-        return 'unknown'
-    
-    def _assess_audio_quality(self, metadata: Dict[str, Any]) -> float:
-        """评估音频质量"""
-        score = 0.5  # 基础分数
-        
-        # 基于比特率评分
-        bitrate = metadata.get('bitrate', 0)
-        if bitrate > 320000:  # 320kbps以上
-            score += 0.3
-        elif bitrate > 192000:  # 192kbps以上
-            score += 0.2
-        elif bitrate > 128000:  # 128kbps以上
-            score += 0.1
-        
-        # 基于格式评分
-        format_type = metadata.get('format', '')
-        if format_type in ['.flac', '.wav']:
-            score += 0.2  # 无损格式加分
-        elif format_type == '.mp3':
-            score += 0.1  # 常见格式加分
-        
-        return min(1.0, score)
-    
-    def _get_similar_artists(self, artist: str) -> List[str]:
-        """获取相似艺术家"""
-        # 简单的相似艺术家推荐（可集成音乐API）
-        similar_artists_map = {
-            '周杰伦': ['林俊杰', '王力宏', '蔡依林'],
-            'Taylor Swift': ['Adele', 'Ed Sheeran', 'Katy Perry'],
-            'Coldplay': ['Radiohead', 'U2', 'The Killers'],
-            '陈奕迅': ['张学友', '刘德华', '王菲']
-        }
-        
-        return similar_artists_map.get(artist, [])
-    
-    async def _update_music_database(self, metadata: Dict[str, Any]):
-        """更新音乐数据库"""
-        artist = metadata.get('artist')
-        album = metadata.get('album')
-        
-        if artist:
-            if artist not in self.artist_database:
-                self.artist_database[artist] = {
-                    'albums': [],
-                    'genres': [],
-                    'first_seen': str(asyncio.get_event_loop().time()),
-                    'track_count': 0
-                }
-            
-            self.artist_database[artist]['track_count'] += 1
-            
-            # 更新流派信息
-            genre = metadata.get('genre')
-            if genre and genre not in self.artist_database[artist]['genres']:
-                self.artist_database[artist]['genres'].append(genre)
-        
-        if album and artist:
-            album_key = f"{artist} - {album}"
-            if album_key not in self.album_database:
-                self.album_database[album_key] = {
-                    'artist': artist,
-                    'title': album,
-                    'year': metadata.get('year', ''),
-                    'tracks': [],
-                    'genre': metadata.get('genre', '')
-                }
-            
-            # 添加曲目信息
-            track_info = {
-                'title': metadata.get('title', ''),
-                'track_number': metadata.get('track_number', ''),
-                'duration': metadata.get('duration', 0),
-                'file_path': metadata.get('file_path', '')
-            }
-            
-            if track_info not in self.album_database[album_key]['tracks']:
-                self.album_database[album_key]['tracks'].append(track_info)
-        
-        self._save_music_database()
-    
-    async def create_playlist(self, name: str, tracks: List[str]) -> Dict[str, Any]:
-        """创建播放列表"""
-        playlist_id = f"playlist_{int(asyncio.get_event_loop().time())}"
-        
-        playlist = {
-            'id': playlist_id,
-            'name': name,
-            'tracks': tracks,
-            'created_at': str(asyncio.get_event_loop().time()),
-            'track_count': len(tracks),
-            'total_duration': sum(track.get('duration', 0) for track in tracks)
-        }
-        
-        self.playlist_database[playlist_id] = playlist
-        self._save_music_database()
-        
-        return playlist
-    
-    async def get_artist_discography(self, artist: str) -> Dict[str, Any]:
-        """获取艺术家作品集"""
-        if artist not in self.artist_database:
-            return {"error": "艺术家不存在"}
-        
-        artist_info = self.artist_database[artist]
-        albums = [album for album_key, album in self.album_database.items() 
-                 if album['artist'] == artist]
-        
-        return {
-            'artist': artist,
-            'albums': albums,
-            'track_count': artist_info['track_count'],
-            'genres': artist_info['genres']
-        }
-    
-    async def search_music(self, query: str, search_type: str = "all") -> Dict[str, Any]:
-        """搜索音乐"""
-        results = {
-            'artists': [],
-            'albums': [],
-            'tracks': []
-        }
-        
-        query_lower = query.lower()
-        
-        # 搜索艺术家
-        if search_type in ['all', 'artists']:
-            for artist, info in self.artist_database.items():
-                if query_lower in artist.lower():
-                    results['artists'].append({
-                        'name': artist,
-                        'track_count': info['track_count'],
-                        'genres': info['genres']
-                    })
-        
-        # 搜索专辑
-        if search_type in ['all', 'albums']:
-            for album_key, album in self.album_database.items():
-                if (query_lower in album['title'].lower() or 
-                    query_lower in album['artist'].lower()):
-                    results['albums'].append(album)
-        
-        # 搜索曲目（需要读取所有曲目信息）
-        # 这里简化实现，实际需要遍历所有文件
+        await self.event_manager.trigger_event(EventType.MUSIC_SEARCH_COMPLETED, event_data)
         
         return results
-
-
-# 使用示例
-async def demo_music_manager():
-    """演示音乐管理器功能"""
-    manager = MusicManager()
     
-    # 分析音乐文件
-    result = await manager.analyze_music_file("example_song.mp3")
-    print("音乐分析结果:", json.dumps(result, indent=2, ensure_ascii=False))
+    async def enrich_metadata(self, artist: str, title: str) -> Dict[str, Any]:
+        """丰富音乐元数据 - 集成ptmusic-sub v2的enrich功能"""
+        metadata = {
+            'artist': artist,
+            'title': title,
+            'enriched_at': datetime.now().isoformat()
+        }
+        
+        # 并行获取各种元数据
+        tasks = []
+        for provider_name, provider in self.metadata_providers.items():
+            task = provider.get_metadata(artist, title)
+            tasks.append(task)
+        
+        metadata_results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        for i, (provider_name, result) in enumerate(zip(self.metadata_providers.keys(), metadata_results)):
+            if isinstance(result, Exception):
+                self.logger.warning(f"{provider_name} 元数据获取失败: {result}")
+                continue
+            metadata[provider_name] = result
+        
+        # 保存到数据库
+        await self.db.save_music_metadata(metadata)
+        
+        return metadata
     
-    # 搜索音乐
-    search_results = await manager.search_music("周杰伦")
-    print("\n搜索结果:", json.dumps(search_results, indent=2, ensure_ascii=False))
+    async def generate_chart_subscriptions(self, chart_data: List[Dict], top_artists: int = 50) -> List[Dict]:
+        """从榜单生成订阅 - 集成ptmusic-sub v2的chartslink功能"""
+        from collections import Counter
+        
+        # 统计热门艺人
+        artist_counter = Counter()
+        for chart_item in chart_data:
+            if chart_item.get('source') in ('apple_music', 'spotify'):
+                artist = (chart_item.get('artist_or_show') or '').strip()
+                if artist:
+                    artist_counter[artist] += 1
+        
+        # 获取前N名艺人
+        top_artists_list = [artist for artist, _ in artist_counter.most_common(top_artists)]
+        
+        # 生成订阅配置
+        subscriptions = []
+        for artist in top_artists_list:
+            subscription = {
+                'name': f'charts-{artist}',
+                'mode': 'torznab',
+                'query': artist,
+                'category': 3000,  # 音乐分类
+                'auto_add': False,
+                'max_add': 3,
+                'rules': {
+                    'include_keywords': [artist, 'FLAC', 'WEB', 'ALAC'],
+                    'exclude_keywords': ['Pack', '合集', 'Karaoke', 'Instrumental'],
+                    'require_quality': ['FLAC', 'ALAC'],
+                    'prefer_keywords': ['WEB', 'FLAC', '24bit']
+                }
+            }
+            subscriptions.append(subscription)
+        
+        return subscriptions
+    
+    def _deduplicate_and_sort(self, results: List[Dict], filters: Dict[str, Any] = None) -> List[Dict]:
+        """去重和排序搜索结果"""
+        # 基于标题和文件大小去重
+        seen = set()
+        unique_results = []
+        
+        for result in results:
+            key = (result.get('title', ''), result.get('size', 0))
+            if key not in seen:
+                seen.add(key)
+                unique_results.append(result)
+        
+        # 根据规则排序
+        if filters and 'sort_by' in filters:
+            sort_key = filters['sort_by']
+            reverse = filters.get('reverse', False)
+            unique_results.sort(key=lambda x: x.get(sort_key, 0), reverse=reverse)
+        
+        return unique_results
 
 
-if __name__ == "__main__":
-    asyncio.run(demo_music_manager())
+class MusicSubscription:
+    """音乐订阅管理"""
+    
+    def __init__(self, name: str, config: Dict[str, Any]):
+        self.name = name
+        self.config = config
+        self.logger = logging.getLogger(__name__)
+    
+    async def search(self, query: str, filters: Dict[str, Any] = None) -> List[Dict[str, Any]]:
+        """执行搜索"""
+        mode = self.config.get('mode', 'torznab')
+        
+        if mode == 'torznab':
+            return await self._search_torznab(query, filters)
+        elif mode == 'rss':
+            return await self._search_rss(query, filters)
+        else:
+            self.logger.warning(f"不支持的搜索模式: {mode}")
+            return []
+    
+    async def _search_torznab(self, query: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Torznab搜索"""
+        # 实现Torznab API调用
+        endpoints = self.config.get('endpoints', [])
+        results = []
+        
+        for endpoint in endpoints:
+            try:
+                # 调用Torznab API
+                torznab_results = await self._call_torznab_api(endpoint, query, filters)
+                results.extend(torznab_results)
+            except Exception as e:
+                self.logger.error(f"Torznab搜索失败 {endpoint}: {e}")
+        
+        return results
+    
+    async def _search_rss(self, query: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """RSS搜索"""
+        # 实现RSS订阅解析
+        rss_url = self.config.get('url')
+        
+        try:
+            return await self._parse_rss_feed(rss_url, query, filters)
+        except Exception as e:
+            self.logger.error(f"RSS搜索失败 {rss_url}: {e}")
+            return []
+    
+    async def _call_torznab_api(self, endpoint: str, query: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """调用Torznab API"""
+        # 实现具体的API调用逻辑
+        # 这里简化实现，实际应该使用aiohttp等异步HTTP客户端
+        return []
+    
+    async def _parse_rss_feed(self, rss_url: str, query: str, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """解析RSS订阅"""
+        # 实现RSS解析逻辑
+        return []
+
+
+class ITunesMetadataProvider:
+    """iTunes元数据提供者"""
+    
+    async def get_metadata(self, artist: str, title: str) -> Dict[str, Any]:
+        """获取iTunes封面和元数据"""
+        # 实现iTunes API调用
+        return {}
+
+
+class MusicBrainzProvider:
+    """MusicBrainz元数据提供者"""
+    
+    async def get_metadata(self, artist: str, title: str) -> Dict[str, Any]:
+        """获取MusicBrainz录音信息"""
+        # 实现MusicBrainz API调用
+        return {}
+
+
+class LRCLibLyricsProvider:
+    """LRCLIB歌词提供者"""
+    
+    async def get_metadata(self, artist: str, title: str) -> Dict[str, Any]:
+        """获取歌词信息"""
+        # 实现LRCLIB API调用
+        return {}

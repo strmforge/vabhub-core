@@ -1,0 +1,48 @@
+name: Release VabHub-Core
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio
+
+    - name: Run tests
+      run: |
+        python -m pytest tests/ -v
+
+    - name: Build package
+      run: |
+        python setup.py sdist bdist_wheel
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: dist/*
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and push Docker image
+      if: startsWith(github.ref, 'refs/tags/v')
+      run: |
+        docker build -t vabhub/vabhub-core:${{ github.ref_name }} .
+        docker push vabhub/vabhub-core:${{ github.ref_name }}

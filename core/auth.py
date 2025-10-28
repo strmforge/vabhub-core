@@ -2,9 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 认证和授权系统
-基于JWT的现代化认证
+基于JWT的现代化认证，参照MoviePilot V2安全标准
+支持API_TOKEN强度检查（≥16位复杂串）
 """
 
+import re
+import secrets
+import string
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from jose import JWTError, jwt
@@ -42,6 +46,7 @@ class AuthManager:
         self.secret_key = settings.secret_key
         self.algorithm = "HS256"
         self.access_token_expire_minutes = 30
+        self.min_api_token_length = 16  # MoviePilot V2标准：≥16位复杂串
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """验证密码"""
@@ -93,6 +98,43 @@ class AuthManager:
             full_name=token_data.username.title(),
             permissions=["read", "write", "admin"]
         )
+    
+    def validate_api_token_strength(self, api_token: str) -> bool:
+        """验证API_TOKEN强度（MoviePilot V2标准）"""
+        if len(api_token) < self.min_api_token_length:
+            logger.warning(f"API_TOKEN长度不足{self.min_api_token_length}位")
+            return False
+        
+        # 检查复杂度：至少包含大写字母、小写字母、数字、特殊字符中的三种
+        has_upper = bool(re.search(r'[A-Z]', api_token))
+        has_lower = bool(re.search(r'[a-z]', api_token))
+        has_digit = bool(re.search(r'\d', api_token))
+        has_special = bool(re.search(r'[^A-Za-z0-9]', api_token))
+        
+        complexity_score = sum([has_upper, has_lower, has_digit, has_special])
+        
+        if complexity_score < 3:
+            logger.warning("API_TOKEN复杂度不足，需要至少包含大写字母、小写字母、数字、特殊字符中的三种")
+            return False
+        
+        logger.info("API_TOKEN强度验证通过")
+        return True
+    
+    def generate_secure_api_token(self) -> str:
+        """生成安全的API_TOKEN（MoviePilot V2标准）"""
+        # 生成32位随机字符串
+        alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+        while True:
+            token = ''.join(secrets.choice(alphabet) for _ in range(32))
+            if self.validate_api_token_strength(token):
+                return token
+    
+    def reset_insecure_api_token(self) -> str:
+        """重置不安全的API_TOKEN（MoviePilot V2策略）"""
+        logger.warning("检测到不安全的API_TOKEN，正在自动重置...")
+        new_token = self.generate_secure_api_token()
+        logger.info(f"已生成新的安全API_TOKEN: {new_token[:8]}...")
+        return new_token
 
 
 # 全局认证管理器实例

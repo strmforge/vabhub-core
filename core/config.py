@@ -2,8 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 VabHub 统一配置系统
-参照MoviePilot的配置管理理念
-提供增强的配置管理功能
+参照MoviePilot的配置管理理念，提供增强的配置管理功能
 """
 
 import os
@@ -12,9 +11,64 @@ import yaml
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional, List
-from pydantic import BaseSettings, Field, validator
+from typing import Dict, Any, Optional, List, Union
+from pydantic import BaseModel, Field, validator
+try:
+    from pydantic_settings import BaseSettings
+except ImportError:
+    # Fallback for older pydantic versions
+    from pydantic import BaseSettings
 from .enhanced_error_handler import retry_on_error, handle_errors
+
+
+class SystemConfModel(BaseModel):
+    """系统关键资源大小配置（对标MoviePilot）"""
+    # 缓存种子数量
+    torrents: int = Field(default=1000, description="缓存种子数量")
+    # 订阅刷新处理数量
+    refresh: int = Field(default=100, description="订阅刷新处理数量")
+    # TMDB请求缓存数量
+    tmdb: int = Field(default=500, description="TMDB请求缓存数量")
+    # 豆瓣请求缓存数量
+    douban: int = Field(default=500, description="豆瓣请求缓存数量")
+    # Bangumi请求缓存数量
+    bangumi: int = Field(default=200, description="Bangumi请求缓存数量")
+    # 元数据缓存过期时间（秒）
+    meta: int = Field(default=3600, description="元数据缓存过期时间")
+    # 调度器数量
+    scheduler: int = Field(default=10, description="调度器数量")
+    # 线程池大小
+    threadpool: int = Field(default=20, description="线程池大小")
+
+
+class CloudStorageConfig(BaseSettings):
+    """云存储配置 - 115网盘API密钥（企业级安全保护）"""
+    
+    # 115网盘AppID - 采用MoviePilot策略：环境变量优先，二进制保护
+    u115_app_id: str = Field(
+        default="100197729",  # 硬编码默认值，但会被环境变量覆盖
+        description="115网盘AppID，通过环境变量U115_APP_ID覆盖"
+    )
+    
+    # 115网盘AppKey - 最高级别保护
+    u115_app_key: str = Field(
+        default="d099625d59aba2a79e70b81fc4589b26",  # 硬编码默认值
+        description="115网盘AppKey，通过环境变量U115_APP_KEY覆盖"
+    )
+    
+    class Config:
+        env_prefix = "U115_"
+        # 序列化时完全排除敏感字段（仿MoviePilot）
+        fields = {
+            "u115_app_id": {"exclude": True},
+            "u115_app_key": {"exclude": True}
+        }
+        
+        @classmethod
+        def custom_serialize(cls, obj_dict):
+            """自定义序列化，完全排除敏感信息"""
+            excluded_fields = {"u115_app_id", "u115_app_key"}
+            return {k: v for k, v in obj_dict.items() if k not in excluded_fields}
 
 
 class DatabaseConfig(BaseSettings):
@@ -69,11 +123,21 @@ class RenameConfig(BaseSettings):
 
 
 class VabHubConfig(BaseSettings):
-    """VabHub主配置"""
+    """VabHub主配置（对标MoviePilot的ConfigModel）"""
+    
     # 基础配置
     app_name: str = Field(default="VabHub", description="应用名称")
     version: str = Field(default="5.0.0", description="版本号")
     debug: bool = Field(default=False, description="调试模式")
+    
+    # 系统配置（对标MoviePilot）
+    host: str = Field(default="0.0.0.0", description="服务地址")
+    port: int = Field(default=8090, description="服务端口")
+    nginx_port: int = Field(default=80, description="Nginx端口")
+    project_name: str = Field(default="VabHub", description="项目名称")
+    
+    # 系统资源配置
+    system_conf: SystemConfModel = SystemConfModel()
     
     # 模块配置
     database: DatabaseConfig = DatabaseConfig()
@@ -91,6 +155,18 @@ class VabHubConfig(BaseSettings):
     enable_pt_search: bool = Field(default=True, description="启用PT搜索")
     enable_media_library: bool = Field(default=True, description="启用媒体库")
     
+    # 媒体相关配置（对标MoviePilot）
+    media_path: List[str] = Field(default=[], description="媒体库路径")
+    download_path: str = Field(default="downloads", description="下载目录")
+    temp_path: str = Field(default="temp", description="临时目录")
+    
+    # 插件配置
+    plugin_path: str = Field(default="plugins", description="插件目录")
+    enable_plugins: bool = Field(default=True, description="启用插件系统")
+    
+    # 安全配置
+    secret_key: str = Field(default="", description="安全密钥")
+    
     class Config:
         env_prefix = "VABHUB_"
         env_file = ".env"
@@ -105,7 +181,8 @@ class EnhancedConfigManager:
         self._config_history: List[Dict] = []
         self._backup_dir = Path("config_backups")
         self._backup_dir.mkdir(exist_ok=True)
-        self._load_config()
+        # 延迟加载配置，避免在导入时立即执行
+        self._config_loaded = False
     
     @retry_on_error(max_retries=3, delay=1.0)
     def _load_config(self):
@@ -183,9 +260,16 @@ class EnhancedConfigManager:
         if len(self._config_history) > 100:
             self._config_history = self._config_history[-100:]
     
+    def ensure_config_loaded(self):
+        """确保配置已加载"""
+        if not self._config_loaded:
+            self._load_config()
+            self._config_loaded = True
+    
     @handle_errors(default_return=None, log_level="WARNING")
     def get_config(self) -> VabHubConfig:
         """获取配置"""
+        self.ensure_config_loaded()
         return self._config
     
     @handle_errors(log_level="ERROR")

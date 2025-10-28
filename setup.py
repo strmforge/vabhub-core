@@ -1,104 +1,42 @@
-from setuptools import setup, find_packages
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+VabHub 二进制打包配置
+采用MoviePilot的安全策略：API密钥硬编码但通过二进制保护
+"""
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+from setuptools import setup, find_packages
+from Cython.Build import cythonize
+import glob
+
+# 扩展模块配置
+extensions = [
+    # 核心模块编译保护
+    *[f"VabHub-Core/core/{module}.py" for module in [
+        "config", "storage_115", "enhanced_error_handler"
+    ]],
+    # 前端模块
+    *[f"VabHub-Frontend/{module}.py" for module in [
+        "main", "components/storage"
+    ] if Path(f"VabHub-Frontend/{module}.py").exists()]
+]
 
 setup(
-    name="vabhub-core",
-    version='1.2.0',
-    author="VabHub Team",
-    author_email="team@vabhub.org",
-    description="VabHub Core Backend Service - Media Management System",
-    long_description=long_description,
-    long_description_content_type="text/markdown",
-    url="https://github.com/vabhub/vabhub-core",
+    name="vabhub",
+    version="1.3.0",
     packages=find_packages(),
-    classifiers=[
-        "Development Status :: 4 - Beta",
-        "Intended Audience :: Developers",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-    ],
-    python_requires=">=3.8",
-    install_requires=[
-        "fastapi==0.104.1",
-        "uvicorn==0.24.0",
-        "pydantic==2.5.0",
-        "jinja2==3.1.2",
-        "python-multipart==0.0.6",
-        "cn2an==0.5.22",
-        "jieba==0.42.1",
-        "requests==2.31.0",
-        "httpx==0.25.2",
-        "aiohttp==3.9.1",
-        "beautifulsoup4==4.12.2",
-        "pandas==2.1.4",
-        "numpy>=1.26.0",
-        "watchdog==3.0.0",
-        "pathlib2==2.3.7.post1",
-        "cryptography==42.0.8",
-        "celery==5.3.4",
-        "redis==5.0.1",
-        "sqlalchemy==2.0.23",
-        "psycopg2-binary==2.9.9",
-        "boto3==1.34.0",
-        "alibabacloud-oss-sdk==0.1.1",
-        "tencentcloud-sdk-python==3.0.1024",
-        "pyacoustid==1.2.2",
-        "chromaprint==0.5.0",
-        "mutagen==1.47.0",
-        "musicbrainzngs==0.7.1",
-        "moviepy==1.0.3",
-        "Pillow==10.1.0",
-        "lxml==4.9.3",
-        "cloudscraper==1.2.71",
-        "pyyaml==6.0.1",
-        "qbittorrent-api>=2025.7.0",
-        "transmission-rpc==4.2.0",
-        "themoviedb==1.0.0",
-        "imdbpy==2021.4.18",
-        "structlog==23.2.0",
-        "prometheus-client==0.19.0",
-        "python-dotenv==1.0.0",
-        "websockets==12.0",
-        "starlette==0.27.0",
-        "psutil==5.9.6",
-        "humanize==4.8.0",
-    ],
-    extras_require={
-        "dev": [
-            "pytest>=6.0",
-            "pytest-asyncio>=0.15",
-            "black>=21.0",
-            "isort>=5.0",
-            "flake8>=3.9",
-            "mypy>=0.910",
-        ],
-        "plugins": [
-            "vabhub-plugins>=1.0.0",
-        ],
-        "resources": [
-            "vabhub-resources>=1.0.0",
-        ],
-    },
-    entry_points={
-        "console_scripts": [
-            "vabhub-core=vabhub_core.cli:main",
-        ],
-    },
-    include_package_data=True,
-    package_data={
-        "vabhub_core": [
-            "config/*.yaml",
-            "config/*.json",
-            "templates/*.html",
-            "static/*",
-        ],
-    },
+    ext_modules=cythonize(
+        extensions,
+        build_dir="build",
+        compiler_directives={
+            "language_level": "3",
+            "always_allow_keywords": True,
+            "cdivision": True,
+            "boundscheck": False,
+            "wraparound": False,
+            "initializedcheck": False,
+            "nonecheck": False
+        }
+    ),
+    script_args=["build_ext", "-j8", "--inplace"],
 )
