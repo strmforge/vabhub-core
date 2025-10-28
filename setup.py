@@ -6,6 +6,7 @@ VabHub 二进制打包配置
 """
 
 from setuptools import setup, find_packages
+from pathlib import Path
 import glob
 
 try:
