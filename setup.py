@@ -6,8 +6,14 @@ VabHub 二进制打包配置
 """
 
 from setuptools import setup, find_packages
-from Cython.Build import cythonize
 import glob
+
+try:
+    from Cython.Build import cythonize
+except ImportError:
+    # 如果Cython不可用，使用空函数替代
+    def cythonize(extensions, **kwargs):
+        return []
 
 # 扩展模块配置
 extensions = [
@@ -77,6 +83,6 @@ setup(
             "initializedcheck": False,
             "nonecheck": False
         }
-    ),
-    script_args=["build_ext", "-j8", "--inplace"],
+    ) if extensions else [],
+    script_args=["build_ext", "-j8", "--inplace"] if extensions else [],
 )
