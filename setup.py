@@ -27,7 +27,7 @@ extensions = [
 setup(
     name="vabhub-core",
     version="1.3.0",
-    packages=find_packages(),
+    packages=find_packages(include=['app', 'core', 'api']),
     install_requires=[
         "fastapi>=0.104.1",
         "uvicorn>=0.24.0",
