@@ -1,28 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-VabHub 二进制打包配置
-采用MoviePilot的安全策略：API密钥硬编码但通过二进制保护
+VabHub Core Package
+A comprehensive media management and automation framework.
 """
 
 from setuptools import setup, find_packages
-from pathlib import Path
-import glob
-
-try:
-    from Cython.Build import cythonize
-except ImportError:
-    # 如果Cython不可用，使用空函数替代
-    def cythonize(extensions, **kwargs):
-        return []
-
-# 扩展模块配置
-extensions = [
-    # 核心模块编译保护
-    *[f"core/{module}.py" for module in [
-        "config", "storage_115", "enhanced_error_handler"
-    ] if Path(f"core/{module}.py").exists()]
-]
 
 setup(
     name="vabhub-core",
@@ -52,7 +35,6 @@ setup(
         "apscheduler>=3.10.4",
         "prometheus-client>=0.19.0",
         "psutil>=5.9.6",
-        "Cython>=3.0.0"
     ],
     extras_require={
         "dev": [
@@ -68,18 +50,21 @@ setup(
             "httpx>=0.25.0"
         ]
     },
-    ext_modules=cythonize(
-        extensions,
-        build_dir="build",
-        compiler_directives={
-            "language_level": "3",
-            "always_allow_keywords": True,
-            "cdivision": True,
-            "boundscheck": False,
-            "wraparound": False,
-            "initializedcheck": False,
-            "nonecheck": False
-        }
-    ) if extensions else [],
-    script_args=["build_ext", "-j8", "--inplace"] if extensions else [],
+    python_requires=">=3.8",
+    author="VabHub Team",
+    author_email="vabhub@example.com",
+    description="A comprehensive media management and automation framework",
+    long_description=open("README.md", encoding="utf-8").read(),
+    long_description_content_type="text/markdown",
+    url="https://github.com/vabhub/vabhub-core",
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+    ],
 )
