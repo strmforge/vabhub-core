@@ -13,11 +13,18 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List, Union
 from pydantic import BaseModel, Field, validator
+
 try:
+    # 优先使用 pydantic-settings 包中的 BaseSettings
     from pydantic_settings import BaseSettings
 except ImportError:
-    # Fallback for older pydantic versions
-    from pydantic import BaseSettings
+    # 回退到 pydantic 包中的 BaseSettings（适用于旧版本）
+    try:
+        from pydantic import BaseSettings
+    except ImportError:
+        # 如果两个都失败，使用 pydantic 的 BaseModel 作为基础
+        from pydantic import BaseModel
+        BaseSettings = BaseModel
 from .enhanced_error_handler import retry_on_error, handle_errors
 
 

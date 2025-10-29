@@ -21,3 +21,27 @@
 2025-10-29 11:32:55,518 - vabhub - INFO - log.py:146 - 注册事件处理器: media.added -> handle_media_added
 2025-10-29 11:32:55,519 - vabhub - INFO - log.py:146 - 注册事件处理器: config.changed -> handle_config_changed
 2025-10-29 11:32:55,524 - vabhub - INFO - log.py:146 - 插件管理器初始化完成
+2025-10-29 13:43:45,354 - vabhub - INFO - log.py:146 - 注册事件处理器: system.startup -> handle_system_startup
+2025-10-29 13:43:45,354 - vabhub - INFO - log.py:146 - 注册事件处理器: media.added -> handle_media_added
+2025-10-29 13:43:45,354 - vabhub - INFO - log.py:146 - 注册事件处理器: config.changed -> handle_config_changed
+2025-10-29 13:43:45,358 - vabhub - INFO - log.py:146 - 插件管理器初始化完成
+2025-10-29 13:44:26,454 - vabhub - INFO - log.py:146 - 注册事件处理器: system.startup -> handle_system_startup
+2025-10-29 13:44:26,455 - vabhub - INFO - log.py:146 - 注册事件处理器: media.added -> handle_media_added
+2025-10-29 13:44:26,455 - vabhub - INFO - log.py:146 - 注册事件处理器: config.changed -> handle_config_changed
+2025-10-29 13:44:26,460 - vabhub - INFO - log.py:146 - 插件管理器初始化完成
+2025-10-29 13:44:49,170 - vabhub - INFO - log.py:146 - 注册事件处理器: system.startup -> handle_system_startup
+2025-10-29 13:44:49,171 - vabhub - INFO - log.py:146 - 注册事件处理器: media.added -> handle_media_added
+2025-10-29 13:44:49,171 - vabhub - INFO - log.py:146 - 注册事件处理器: config.changed -> handle_config_changed
+2025-10-29 13:44:49,176 - vabhub - INFO - log.py:146 - 插件管理器初始化完成
+2025-10-29 13:45:09,371 - vabhub - INFO - log.py:146 - 注册事件处理器: system.startup -> handle_system_startup
+2025-10-29 13:45:09,371 - vabhub - INFO - log.py:146 - 注册事件处理器: media.added -> handle_media_added
+2025-10-29 13:45:09,371 - vabhub - INFO - log.py:146 - 注册事件处理器: config.changed -> handle_config_changed
+2025-10-29 13:45:09,375 - vabhub - INFO - log.py:146 - 插件管理器初始化完成
+2025-10-29 13:45:31,247 - vabhub - INFO - log.py:146 - 注册事件处理器: system.startup -> handle_system_startup
+2025-10-29 13:45:31,247 - vabhub - INFO - log.py:146 - 注册事件处理器: media.added -> handle_media_added
+2025-10-29 13:45:31,247 - vabhub - INFO - log.py:146 - 注册事件处理器: config.changed -> handle_config_changed
+2025-10-29 13:45:31,252 - vabhub - INFO - log.py:146 - 插件管理器初始化完成
+2025-10-29 13:45:52,921 - vabhub - INFO - log.py:146 - 注册事件处理器: system.startup -> handle_system_startup
+2025-10-29 13:45:52,922 - vabhub - INFO - log.py:146 - 注册事件处理器: media.added -> handle_media_added
+2025-10-29 13:45:52,922 - vabhub - INFO - log.py:146 - 注册事件处理器: config.changed -> handle_config_changed
+2025-10-29 13:45:52,927 - vabhub - INFO - log.py:146 - 插件管理器初始化完成
