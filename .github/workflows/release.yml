@@ -50,5 +50,13 @@ jobs:
     - name: Build and push Docker image
       if: startsWith(github.ref, 'refs/tags/v')
       run: |
-        docker build -t vabhub/vabhub-core:${{ github.ref_name }} .
-        docker push vabhub/vabhub-core:${{ github.ref_name }}
+        # 构建Docker镜像
+        docker build -t ghcr.io/strmforge/vabhub-core:${{ github.ref_name }} .
+        docker build -t ghcr.io/strmforge/vabhub-core:latest .
+        
+        # 登录GitHub Packages
+        echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        
+        # 推送镜像到GitHub Packages
+        docker push ghcr.io/strmforge/vabhub-core:${{ github.ref_name }}
+        docker push ghcr.io/strmforge/vabhub-core:latest

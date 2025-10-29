@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="vabhub-core",
-    version="1.3.0",
+    version="1.5.0",
     packages=find_packages(include=['app', 'core', 'api']),
     install_requires=[
         "fastapi>=0.104.1",
