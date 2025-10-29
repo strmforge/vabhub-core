@@ -35,6 +35,7 @@ setup(
         "apscheduler>=3.10.4",
         "prometheus-client>=0.19.0",
         "psutil>=5.9.6",
+        "structlog>=23.2.0",
     ],
     extras_require={
         "dev": [
