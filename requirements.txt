@@ -52,6 +52,7 @@ mypy>=1.6.1
 # 其他依赖
 pathlib2>=2.3.0
 oss2>=2.18.0
+beautifulsoup4>=4.12.0
 
 # 编译工具
 Cython>=3.0.0

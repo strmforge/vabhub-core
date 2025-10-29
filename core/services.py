@@ -10,7 +10,7 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 import shutil
 
-from .base import BaseService, BaseProcessor, MediaFile, ProcessingResult, BatchTask
+from .base import BaseService, BaseProcessor, MediaFile, ProcessingResult, BatchTask, BaseManager
 from .config import get_config
 from .file_cleaner import FileCleanerService
 from .batch_processor import BatchProcessorService
@@ -315,3 +315,8 @@ class ServiceManager(BaseManager):
 
 # 全局服务管理器实例
 service_manager = ServiceManager()
+
+
+def get_service_manager():
+    """获取全局服务管理器实例"""
+    return service_manager

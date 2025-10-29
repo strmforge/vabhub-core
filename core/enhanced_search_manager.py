@@ -171,10 +171,10 @@ class EnhancedSearchManager:
         self.search_chains["resource"] = resource_chain
         
         # 音乐搜索链
-        music_chain = SearchChain("music", SearchPriority.MEDIUM)
-        music_chain.add_searcher(self._search_qq_music)
-        music_chain.add_searcher(self._search_netease)
-        self.search_chains["music"] = music_chain
+        charts_chain = SearchChain("charts", SearchPriority.MEDIUM)
+        charts_chain.add_searcher(self._search_netflix_top10)
+        charts_chain.add_searcher(self._search_imdb_datasets)
+        self.search_chains["charts"] = charts_chain
     
     def _initialize_default_filters(self):
         """初始化默认过滤器"""
@@ -198,6 +198,295 @@ class EnhancedSearchManager:
         self.global_filters.append(SearchFilter(
             name="include_high_quality",
             pattern=r"(REMUX|BluRay|WEB-DL|UHD)",
+            action="include",
+            priority=SearchPriority.HIGH
+        ))
+    
+    async def search(self, 
+                     query: str,
+                     search_mode: SearchMode = SearchMode.COMBINED,
+                     content_type: str = "all",
+                     sources: List[str] = None,
+                     filters: List[Dict[str, Any]] = None,
+                     limit: int = 50,
+                     offset: int = 0) -> List[SearchResult]:
+        """增强版搜索入口"""
+        logger.info(f"增强搜索: {query}, 模式: {search_mode.value}, 类型: {content_type}")
+        
+        # 记录搜索历史
+        self._add_to_history(query, search_mode, content_type, sources)
+        
+        # 根据搜索模式选择搜索链
+        search_chains = self._select_search_chains(search_mode, content_type)
+        
+        # 执行搜索链
+        all_results = []
+        for chain_name, chain in search_chains.items():
+            try:
+                results = await chain.search(query, content_type=content_type, limit=limit)
+                all_results.extend(results)
+            except Exception as e:
+                logger.error(f"搜索链 {chain_name} 执行失败: {e}")
+        
+        # 应用全局过滤器
+        filtered_results = self._apply_global_filters(all_results)
+        
+        # 合并和排序结果
+        sorted_results = self._sort_results(filtered_results, query)
+        
+        # 分页
+        paginated_results = sorted_results[offset:offset + limit]
+        
+        logger.info(f"增强搜索完成: {query}, 找到 {len(paginated_results)} 个结果")
+        return paginated_results
+    
+    def _select_search_chains(self, search_mode: SearchMode, content_type: str) -> Dict[str, SearchChain]:
+        """选择搜索链"""
+        chains = {}
+        
+        if search_mode == SearchMode.MEDIA_INFO:
+            if content_type in ["all", "movie", "tv", "anime"]:
+                chains["media_info"] = self.search_chains["media_info"]
+        elif search_mode == SearchMode.RESOURCE:
+            if content_type in ["all", "movie", "tv", "anime"]:
+                chains["resource"] = self.search_chains["resource"]
+        elif search_mode == SearchMode.COMBINED:
+            if content_type in ["all", "movie", "tv", "anime"]:
+                chains["media_info"] = self.search_chains["media_info"]
+                chains["resource"] = self.search_chains["resource"]
+        
+        if content_type in ["all", "music"]:
+            chains["music"] = self.search_chains["music"]
+        
+        return chains
+    
+    def _apply_global_filters(self, results: List[SearchResult]) -> List[SearchResult]:
+        """应用全局过滤器"""
+        filtered_results = []
+        
+        for result in results:
+            filtered = False
+            filter_reason = None
+            
+            for search_filter in self.global_filters:
+                if not search_filter.enabled:
+                    continue
+                
+                # 检查是否匹配过滤器
+                if re.search(search_filter.pattern, result.title, re.IGNORECASE):
+                    if search_filter.action == "exclude":
+                        filtered = True
+                        filter_reason = f"被全局过滤器 '{search_filter.name}' 排除"
+                        break
+                    elif search_filter.action == "include":
+                        # 包含过滤器，继续检查其他过滤器
+                        pass
+            
+            if filtered:
+                result.filtered = True
+                result.filter_reason = filter_reason
+            
+            filtered_results.append(result)
+        
+        return filtered_results
+    
+    def _sort_results(self, results: List[SearchResult], query: str) -> List[SearchResult]:
+        """排序结果"""
+        # 计算相关性分数
+        for result in results:
+            result.score = self._calculate_relevance_score(result, query)
+        
+        # 按分数降序排序
+        return sorted(results, key=lambda x: x.score, reverse=True)
+    
+    def _calculate_relevance_score(self, result: SearchResult, query: str) -> float:
+        """计算相关性分数"""
+        score = 0.0
+        
+        # 标题匹配度
+        if query.lower() in result.title.lower():
+            score += 10.0
+        
+        # 源优先级
+        source_priority = {
+            "tmdb": 5.0,
+            "douban": 4.0,
+            "local": 3.0,
+            "netflix_top10": 2.5,
+            "imdb_datasets": 2.5
+        }
+        score += source_priority.get(result.source, 1.0)
+        
+        # 质量分数
+        if result.metadata.get("quality"):
+            quality_scores = {
+                "REMUX": 3.0,
+                "BluRay": 2.5,
+                "WEB-DL": 2.0,
+                "HDTV": 1.5
+            }
+            score += quality_scores.get(result.metadata["quality"], 1.0)
+        
+        return score
+    
+    def _add_to_history(self, query: str, mode: SearchMode, content_type: str, sources: List[str] = None):
+        """添加到搜索历史"""
+        history_item = {
+            "query": query,
+            "mode": mode.value,
+            "type": content_type,
+            "sources": sources or [],
+            "timestamp": datetime.now().isoformat(),
+            "result_count": 0  # 将在搜索完成后更新
+        }
+        
+        # 限制历史记录数量
+        self.search_history.insert(0, history_item)
+        if len(self.search_history) > 100:
+            self.search_history = self.search_history[:100]
+    
+    async def get_search_suggestions(self, query: str, limit: int = 10) -> List[str]:
+        """获取搜索建议"""
+        # 这里应该实现智能搜索建议算法
+        # 简化实现：基于历史记录和热门搜索
+        suggestions = []
+        
+        # 基于历史记录的建议
+        for history in self.search_history:
+            if query.lower() in history["query"].lower():
+                suggestions.append(history["query"])
+        
+        # 去重和限制数量
+        suggestions = list(dict.fromkeys(suggestions))[:limit]
+        
+        return suggestions
+    
+    async def get_related_queries(self, query: str, limit: int = 5) -> List[str]:
+        """获取相关查询"""
+        # 这里应该实现相关查询算法
+        # 简化实现：基于内容类型的关键词扩展
+        related = []
+        
+        if "电影" in query or "movie" in query.lower():
+            related.extend(["热门电影", "最新电影", "高分电影"])
+        elif "电视剧" in query or "tv" in query.lower():
+            related.extend(["热门电视剧", "最新剧集", "美剧推荐"])
+        elif "音乐" in query or "music" in query.lower():
+            related.extend(["热门歌曲", "新歌推荐", "排行榜"])
+        
+        return related[:limit]
+    
+    async def get_trending_searches(self, limit: int = 10) -> List[str]:
+        """获取热门搜索"""
+        # 这里应该实现热门搜索算法
+        # 简化实现：返回固定热门搜索
+        trending = [
+            "阿凡达：水之道", "流浪地球2", "封神第一部",
+            "漫长的季节", "狂飙", "三体",
+            "周杰伦", "Taylor Swift", "林俊杰"
+        ]
+        
+        return trending[:limit]
+    
+    async def get_search_history(self, limit: int = 20, offset: int = 0) -> List[Dict[str, Any]]:
+        """获取搜索历史"""
+        return self.search_history[offset:offset + limit]
+    
+    async def get_popular_searches(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """获取热门搜索统计"""
+        # 这里应该实现热门搜索统计
+        # 简化实现：返回固定数据
+        popular = [
+            {"query": "阿凡达：水之道", "count": 150},
+            {"query": "流浪地球2", "count": 120},
+            {"query": "漫长的季节", "count": 100},
+            {"query": "狂飙", "count": 90},
+            {"query": "三体", "count": 80}
+        ]
+        
+        return popular[:limit]
+    
+    async def delete_search_history(self, query_id: str):
+        """删除搜索历史记录"""
+        # 简化实现：删除指定查询的历史记录
+        self.search_history = [h for h in self.search_history if h["query"] != query_id]
+    
+    async def clear_search_history(self):
+        """清空搜索历史"""
+        self.search_history = []
+    
+    # 搜索器实现（简化版）
+    async def _search_tmdb(self, query: str, **kwargs) -> List[SearchResult]:
+        """搜索TMDB"""
+        # 这里应该实现TMDB API调用
+        # 简化实现：返回模拟数据
+        return [
+            SearchResult(
+                title="阿凡达：水之道",
+                type="movie",
+                source="tmdb",
+                score=9.5,
+                metadata={"year": 2022, "rating": 7.8, "overview": "潘多拉星球的水下冒险故事..."}
+            )
+        ]
+    
+    async def _search_douban(self, query: str, **kwargs) -> List[SearchResult]:
+        """搜索豆瓣"""
+        # 这里应该实现豆瓣API调用
+        return [
+            SearchResult(
+                title="流浪地球2",
+                type="movie",
+                source="douban",
+                score=9.2,
+                metadata={"year": 2023, "rating": 8.3, "overview": "人类带着地球逃离太阳系的壮丽史诗..."}
+            )
+        ]
+    
+    async def _search_pt_sites(self, query: str, **kwargs) -> List[SearchResult]:
+        """搜索PT站点"""
+        # 这里应该实现PT站点搜索
+        return [
+            SearchResult(
+                title="阿凡达：水之道.2022.IMAX.1080p.BluRay.x264",
+                type="movie",
+                source="pt",
+                score=8.5,
+                metadata={"quality": "BluRay", "size": "15.2GB", "seeds": 150},
+                download_info={"magnet": "magnet:?xt=urn:btih:..."}
+            )
+        ]
+    
+    async def _search_torznab(self, query: str, **kwargs) -> List[SearchResult]:
+        """搜索Torznab"""
+        # 这里应该实现Torznab API调用
+        return []
+    
+    async def _search_qq_music(self, query: str, **kwargs) -> List[SearchResult]:
+        """搜索QQ音乐"""
+        # 这里应该实现QQ音乐API调用
+        return [
+            SearchResult(
+                title="七里香",
+                type="music",
+                source="qq_music",
+                score=9.0,
+                metadata={"artist": "周杰伦", "album": "七里香", "duration": "4:59"}
+            )
+        ]
+    
+    async def _search_netease(self, query: str, **kwargs) -> List[SearchResult]:
+        """搜索网易云音乐"""
+        # 这里应该实现网易云音乐API调用
+        return [
+            SearchResult(
+                title="晴天",
+                type="music",
+                source="netease",
+                score=8.8,
+                metadata={"artist": "周杰伦", "album": "叶惠美", "duration": "4:29"}
+            )
+        ]
             action="include",
             priority=SearchPriority.HIGH
         ))
@@ -352,15 +641,15 @@ class EnhancedSearchManager:
         # 简化实现
         return []
     
-    async def _search_qq_music(self, query: str, **kwargs) -> List[SearchResult]:
-        """搜索QQ音乐"""
-        # 这里应该调用QQ音乐API
+    async def _search_netflix_top10(self, query: str, **kwargs) -> List[SearchResult]:
+        """搜索Netflix Top 10"""
+        # 这里应该调用Netflix Top 10 API
         # 简化实现
         return []
     
-    async def _search_netease(self, query: str, **kwargs) -> List[SearchResult]:
-        """搜索网易云音乐"""
-        # 这里应该调用网易云音乐API
+    async def _search_imdb_datasets(self, query: str, **kwargs) -> List[SearchResult]:
+        """搜索IMDb Datasets"""
+        # 这里应该调用IMDb Datasets API
         # 简化实现
         return []
     

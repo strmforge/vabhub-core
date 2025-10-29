@@ -23,6 +23,12 @@ from app.api.strm_routes import strm_router
 # 导入音乐订阅路由
 from app.music_subscription_routes import router as music_subscription_router
 
+# 导入搜索API路由
+from app.api.search import router as search_router
+
+# 导入发现API路由
+from app.api.discover import router as discover_router
+
 # 创建API路由器
 api_router = APIRouter()
 
@@ -235,3 +241,9 @@ api_router.include_router(strm_router)
 
 # 包含音乐订阅路由
 api_router.include_router(music_subscription_router)
+
+# 包含搜索API路由
+api_router.include_router(search_router)
+
+# 包含发现API路由
+api_router.include_router(discover_router)

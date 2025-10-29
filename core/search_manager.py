@@ -30,8 +30,8 @@ class SearchSource(Enum):
     """搜索源枚举"""
     TMDB = "tmdb"
     DOUBAN = "douban"
-    QQ_MUSIC = "qq_music"
-    NETEASE = "netease"
+    NETFLIX_TOP10 = "netflix_top10"
+    IMDB_DATASETS = "imdb_datasets"
     SPOTIFY = "spotify"
     APPLE_MUSIC = "apple_music"
     LOCAL = "local"
@@ -200,15 +200,15 @@ class SearchManager:
                           query: str,
                           sources: List[SearchSource] = None,
                           limit: int = 20) -> List[SearchResult]:
-        """专门搜索音乐"""
+        """专门搜索影视榜单"""
         if sources is None:
-            sources = [SearchSource.QQ_MUSIC, SearchSource.NETEASE, SearchSource.SPOTIFY]
+            sources = [SearchSource.NETFLIX_TOP10, SearchSource.IMDB_DATASETS, SearchSource.SPOTIFY]
         
-        music_tasks = []
+        chart_tasks = []
         for source in sources:
-            if source in [SearchSource.QQ_MUSIC, SearchSource.NETEASE, SearchSource.APPLE_MUSIC]:
-                task = self._search_music_by_source(query, source, limit)
-                music_tasks.append(task)
+            if source in [SearchSource.NETFLIX_TOP10, SearchSource.IMDB_DATASETS, SearchSource.APPLE_MUSIC]:
+                task = self._search_charts_by_source(query, source, limit)
+                chart_tasks.append(task)
         
         results = await asyncio.gather(*music_tasks, return_exceptions=True)
         
@@ -260,8 +260,8 @@ class SearchManager:
             elif source in [SearchSource.TMDB, SearchSource.DOUBAN]:
                 return await self._search_media_by_source(query, source, search_type, limit)
             
-            elif source in [SearchSource.QQ_MUSIC, SearchSource.NETEASE, SearchSource.APPLE_MUSIC]:
-                return await self._search_music_by_source(query, source, limit)
+            elif source in [SearchSource.NETFLIX_TOP10, SearchSource.IMDB_DATASETS, SearchSource.APPLE_MUSIC]:
+                return await self._search_charts_by_source(query, source, limit)
             
             else:
                 return []
@@ -306,12 +306,12 @@ class SearchManager:
                                      limit: int) -> List[SearchResult]:
         """搜索音乐"""
         try:
-            if source == SearchSource.QQ_MUSIC:
-                results = await self.music_manager.search_music(query, "qq_music", limit)
-            elif source == SearchSource.NETEASE:
-                results = await self.music_manager.search_music(query, "netease", limit)
+            if source == SearchSource.NETFLIX_TOP10:
+                results = await self.charts_manager.search_charts(query, "netflix_top10", limit)
+            elif source == SearchSource.IMDB_DATASETS:
+                results = await self.charts_manager.search_charts(query, "imdb_datasets", limit)
             elif source == SearchSource.APPLE_MUSIC:
-                results = await self.music_manager.search_music(query, "apple_music", limit)
+                results = await self.charts_manager.search_charts(query, "apple_music", limit)
             else:
                 return []
             
