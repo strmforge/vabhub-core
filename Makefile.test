@@ -1,0 +1,69 @@
+# Test automation for VabHub Core
+
+.PHONY: test test-unit test-integration test-coverage test-all clean-test
+
+# Test configuration
+PYTEST_OPTS = -v --tb=short --strict-markers
+COVERAGE_OPTS = --cov=core --cov-report=html --cov-report=term
+
+# Default test target
+test: test-unit test-integration
+
+# Unit tests only
+test-unit:
+	@pytest tests/test_*.py -k "not integration" $(PYTEST_OPTS)
+
+# Integration tests only
+test-integration:
+	@pytest tests/test_integration.py $(PYTEST_OPTS)
+
+# Run tests with coverage
+test-coverage:
+	@pytest tests/ $(PYTEST_OPTS) $(COVERAGE_OPTS)
+
+# Run all tests including integration
+test-all:
+	@pytest tests/ $(PYTEST_OPTS)
+
+# Run specific test file
+test-file:
+	@pytest $(FILE) $(PYTEST_OPTS)
+
+# Run tests with specific marker
+test-marker:
+	@pytest tests/ -m $(MARKER) $(PYTEST_OPTS)
+
+# Generate test report
+test-report:
+	@pytest tests/ $(PYTEST_OPTS) --junitxml=test-results.xml --html=test-report.html
+
+# Clean test artifacts
+clean-test:
+	@rm -rf .pytest_cache
+	@rm -rf htmlcov
+	@rm -rf test-results.xml
+	@rm -rf test-report.html
+	@rm -rf .coverage
+
+# Help target
+help:
+	@echo "Available test targets:"
+	@echo "  test           - Run all tests"
+	@echo "  test-unit      - Run unit tests only"
+	@echo "  test-integration - Run integration tests only"
+	@echo "  test-coverage  - Run tests with coverage report"
+	@echo "  test-all       - Run all tests including integration"
+	@echo "  test-file FILE=path - Run specific test file"
+	@echo "  test-marker MARKER=marker - Run tests with specific marker"
+	@echo "  test-report    - Generate test reports"
+	@echo "  clean-test     - Clean test artifacts"
+
+# Development test targets
+dev-test: test-unit
+
+dev-test-coverage: test-coverage
+
+# CI/CD test targets
+ci-test: test-all
+
+ci-test-report: test-report

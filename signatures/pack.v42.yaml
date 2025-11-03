@@ -1,0 +1,27 @@
+version: 42
+signatures:
+  - id: "hnr-basic"
+    category: "HNR"
+    patterns:
+      text: ["H&R","HnR","Hit & Run","Hit&Run","强制保种","命中考核"]
+      regex:
+        - "(?i)\\bH(?:\\s*&\\s*|[/／＆])?R\\b"
+        - "(?i)hit\\s*&?\\s*run"
+    default_action: "block"
+    version: 1
+    penalties: { base: -50, per_level: -10 }
+
+  - id: "hnr-level"
+    category: "HNR_LEVEL"
+    patterns:
+      regex:
+        - "(?i)(?<!H\\.?26[45])(?<!HDR)\\bH\\s*[-/:：]?(?<level>[1-9]|10)\\b"
+    map_level: true
+    default_action: "block"
+    version: 1
+
+site_overrides:
+  siteA:
+    selectors: [".badge-hnr", ".label-hnr", "H5", "H3"]
+  siteB:
+    selectors: [".tag:contains('考核')", ".icon[title*=H&R]"]
