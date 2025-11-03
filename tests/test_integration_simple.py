@@ -50,28 +50,28 @@ class TestIntegrationSimple:
     def test_security_headers(self, test_client):
         """测试安全头信息"""
         response = test_client.get("/")
-        
+
         # 检查基本的安全头信息
         headers = response.headers
-        
+
         # 检查内容类型选项
-        if 'x-content-type-options' in headers:
-            assert headers['x-content-type-options'] == 'nosniff'
-        
+        if "x-content-type-options" in headers:
+            assert headers["x-content-type-options"] == "nosniff"
+
         # 检查XSS保护
-        if 'x-xss-protection' in headers:
-            assert '1' in headers['x-xss-protection']
+        if "x-xss-protection" in headers:
+            assert "1" in headers["x-xss-protection"]
 
     def test_response_format(self, test_client):
         """测试响应格式"""
         response = test_client.get("/")
         data = response.json()
-        
+
         # 检查响应格式
         assert isinstance(data, dict)
         assert "message" in data
         assert "version" in data
-        
+
         # 检查版本格式
         assert isinstance(data["version"], str)
         assert len(data["version"]) > 0

@@ -14,6 +14,7 @@ router = APIRouter(prefix="/api/v1/download", tags=["download"])
 
 class DownloadClientConfigRequest(BaseModel):
     """下载器配置请求"""
+
     client_id: str
     client_type: DownloadClientType
     host: str
@@ -26,6 +27,7 @@ class DownloadClientConfigRequest(BaseModel):
 
 class TorrentAddRequest(BaseModel):
     """添加种子请求"""
+
     torrent: str  # 磁力链接或种子URL
     client_id: Optional[str] = None
     save_path: Optional[str] = None
@@ -35,17 +37,20 @@ class TorrentAddRequest(BaseModel):
 
 class TorrentActionRequest(BaseModel):
     """种子操作请求"""
+
     torrent_hash: str
     client_id: Optional[str] = None
 
 
 class TorrentRemoveRequest(TorrentActionRequest):
     """删除种子请求"""
+
     delete_files: bool = False
 
 
 class TorrentSetCategoryRequest(BaseModel):
     """设置分类请求"""
+
     torrent_hash: str
     category: str
     client_id: Optional[str] = None
@@ -53,6 +58,7 @@ class TorrentSetCategoryRequest(BaseModel):
 
 class TorrentSetRatioRequest(BaseModel):
     """设置分享率请求"""
+
     torrent_hash: str
     ratio: float
     client_id: Optional[str] = None
@@ -60,6 +66,7 @@ class TorrentSetRatioRequest(BaseModel):
 
 class TorrentSetSpeedRequest(BaseModel):
     """设置速度请求"""
+
     torrent_hash: str
     download_limit: int = 0
     upload_limit: int = 0
@@ -78,14 +85,14 @@ async def add_download_client(config: DownloadClientConfigRequest):
             username=config.username,
             password=config.password,
             timeout=config.timeout,
-            set_as_default=config.set_as_default
+            set_as_default=config.set_as_default,
         )
-        
+
         if success:
             return {"ok": True, "message": "下载器添加成功"}
         else:
             raise HTTPException(status_code=400, detail="下载器添加失败")
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -95,12 +102,12 @@ async def remove_download_client(client_id: str):
     """移除下载器客户端"""
     try:
         success = await download_manager.remove_client(client_id)
-        
+
         if success:
             return {"ok": True, "message": "下载器移除成功"}
         else:
             raise HTTPException(status_code=404, detail="下载器不存在")
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -110,12 +117,12 @@ async def set_default_download_client(client_id: str):
     """设置默认下载器"""
     try:
         success = download_manager.set_default_client(client_id)
-        
+
         if success:
             return {"ok": True, "message": "默认下载器设置成功"}
         else:
             raise HTTPException(status_code=404, detail="下载器不存在")
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -139,14 +146,14 @@ async def add_torrent(request: TorrentAddRequest):
             client_id=request.client_id,
             save_path=request.save_path,
             category=request.category,
-            tags=request.tags
+            tags=request.tags,
         )
-        
+
         if success:
             return {"ok": True, "message": "种子添加成功"}
         else:
             raise HTTPException(status_code=400, detail="种子添加失败")
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -156,15 +163,14 @@ async def pause_torrent(torrent_hash: str, request: TorrentActionRequest):
     """暂停种子"""
     try:
         success = await download_manager.pause_torrent(
-            torrent_hash=torrent_hash,
-            client_id=request.client_id
+            torrent_hash=torrent_hash, client_id=request.client_id
         )
-        
+
         if success:
             return {"ok": True, "message": "种子暂停成功"}
         else:
             raise HTTPException(status_code=400, detail="种子暂停失败")
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -174,15 +180,14 @@ async def resume_torrent(torrent_hash: str, request: TorrentActionRequest):
     """恢复种子"""
     try:
         success = await download_manager.resume_torrent(
-            torrent_hash=torrent_hash,
-            client_id=request.client_id
+            torrent_hash=torrent_hash, client_id=request.client_id
         )
-        
+
         if success:
             return {"ok": True, "message": "种子恢复成功"}
         else:
             raise HTTPException(status_code=400, detail="种子恢复失败")
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -194,14 +199,14 @@ async def remove_torrent(torrent_hash: str, request: TorrentRemoveRequest):
         success = await download_manager.remove_torrent(
             torrent_hash=torrent_hash,
             delete_files=request.delete_files,
-            client_id=request.client_id
+            client_id=request.client_id,
         )
-        
+
         if success:
             return {"ok": True, "message": "种子删除成功"}
         else:
             raise HTTPException(status_code=400, detail="种子删除失败")
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -210,36 +215,36 @@ async def remove_torrent(torrent_hash: str, request: TorrentRemoveRequest):
 async def get_torrents(
     client_id: Optional[str] = None,
     status: Optional[TorrentStatus] = None,
-    category: Optional[str] = None
+    category: Optional[str] = None,
 ):
     """获取种子列表"""
     try:
         torrents = await download_manager.get_torrents(
-            client_id=client_id,
-            status_filter=status,
-            category=category
+            client_id=client_id, status_filter=status, category=category
         )
-        
+
         # 转换为可序列化的格式
         torrents_data = []
         for torrent in torrents:
-            torrents_data.append({
-                'hash': torrent.hash,
-                'name': torrent.name,
-                'size': torrent.size,
-                'progress': torrent.progress,
-                'status': torrent.status.value,
-                'download_speed': torrent.download_speed,
-                'upload_speed': torrent.upload_speed,
-                'ratio': torrent.ratio,
-                'eta': torrent.eta,
-                'save_path': torrent.save_path,
-                'category': torrent.category,
-                'added_on': torrent.added_on
-            })
-        
+            torrents_data.append(
+                {
+                    "hash": torrent.hash,
+                    "name": torrent.name,
+                    "size": torrent.size,
+                    "progress": torrent.progress,
+                    "status": torrent.status.value,
+                    "download_speed": torrent.download_speed,
+                    "upload_speed": torrent.upload_speed,
+                    "ratio": torrent.ratio,
+                    "eta": torrent.eta,
+                    "save_path": torrent.save_path,
+                    "category": torrent.category,
+                    "added_on": torrent.added_on,
+                }
+            )
+
         return {"ok": True, "data": torrents_data}
-        
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -249,27 +254,27 @@ async def get_torrent(torrent_hash: str, client_id: Optional[str] = None):
     """获取单个种子信息"""
     try:
         torrent = await download_manager.get_torrent(torrent_hash, client_id)
-        
+
         if not torrent:
             raise HTTPException(status_code=404, detail="种子不存在")
-        
+
         torrent_data = {
-            'hash': torrent.hash,
-            'name': torrent.name,
-            'size': torrent.size,
-            'progress': torrent.progress,
-            'status': torrent.status.value,
-            'download_speed': torrent.download_speed,
-            'upload_speed': torrent.upload_speed,
-            'ratio': torrent.ratio,
-            'eta': torrent.eta,
-            'save_path': torrent.save_path,
-            'category': torrent.category,
-            'added_on': torrent.added_on
+            "hash": torrent.hash,
+            "name": torrent.name,
+            "size": torrent.size,
+            "progress": torrent.progress,
+            "status": torrent.status.value,
+            "download_speed": torrent.download_speed,
+            "upload_speed": torrent.upload_speed,
+            "ratio": torrent.ratio,
+            "eta": torrent.eta,
+            "save_path": torrent.save_path,
+            "category": torrent.category,
+            "added_on": torrent.added_on,
         }
-        
+
         return {"ok": True, "data": torrent_data}
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -283,14 +288,14 @@ async def set_torrent_category(torrent_hash: str, request: TorrentSetCategoryReq
         success = await download_manager.set_category(
             torrent_hash=torrent_hash,
             category=request.category,
-            client_id=request.client_id
+            client_id=request.client_id,
         )
-        
+
         if success:
             return {"ok": True, "message": "分类设置成功"}
         else:
             raise HTTPException(status_code=400, detail="分类设置失败")
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -300,16 +305,14 @@ async def set_torrent_ratio(torrent_hash: str, request: TorrentSetRatioRequest):
     """设置种子分享率限制"""
     try:
         success = await download_manager.set_ratio_limit(
-            torrent_hash=torrent_hash,
-            ratio=request.ratio,
-            client_id=request.client_id
+            torrent_hash=torrent_hash, ratio=request.ratio, client_id=request.client_id
         )
-        
+
         if success:
             return {"ok": True, "message": "分享率限制设置成功"}
         else:
             raise HTTPException(status_code=400, detail="分享率限制设置失败")
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -322,14 +325,14 @@ async def set_torrent_speed(torrent_hash: str, request: TorrentSetSpeedRequest):
             torrent_hash=torrent_hash,
             download_limit=request.download_limit,
             upload_limit=request.upload_limit,
-            client_id=request.client_id
+            client_id=request.client_id,
         )
-        
+
         if success:
             return {"ok": True, "message": "速度限制设置成功"}
         else:
             raise HTTPException(status_code=400, detail="速度限制设置失败")
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

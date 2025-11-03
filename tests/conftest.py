@@ -52,10 +52,10 @@ async def database_manager(temp_db_path):
 @pytest.fixture
 async def cache_manager():
     """Create a mock cache manager for testing."""
-    with patch('core.cache.redis.Redis') as mock_redis:
+    with patch("core.cache.redis.Redis") as mock_redis:
         mock_redis_instance = AsyncMock()
         mock_redis.return_value = mock_redis_instance
-        
+
         cache = RedisCacheManager("redis://localhost:6379/1", 300)
         yield cache
 
@@ -63,7 +63,7 @@ async def cache_manager():
 @pytest.fixture
 def mock_httpx_client():
     """Create a mock HTTPX client for testing external API calls."""
-    with patch('httpx.AsyncClient') as mock_client:
+    with patch("httpx.AsyncClient") as mock_client:
         mock_instance = AsyncMock()
         mock_client.return_value.__aenter__.return_value = mock_instance
         yield mock_instance
@@ -72,7 +72,7 @@ def mock_httpx_client():
 @pytest.fixture
 def mock_requests():
     """Create a mock requests module for testing."""
-    with patch('requests.get') as mock_get:
+    with patch("requests.get") as mock_get:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {"success": True}
@@ -99,13 +99,13 @@ def sample_chart_data():
                     "popularity": 1000,
                     "release_date": "2023-01-01",
                     "poster_url": "http://example.com/poster.jpg",
-                    "provider": "tmdb"
+                    "provider": "tmdb",
                 }
             ],
             "total": 1,
             "page": 1,
-            "total_pages": 1
-        }
+            "total_pages": 1,
+        },
     }
 
 
@@ -116,7 +116,7 @@ def sample_user_data():
         "username": "testuser",
         "password": "testpassword",
         "email": "test@example.com",
-        "full_name": "Test User"
+        "full_name": "Test User",
     }
 
 
@@ -129,7 +129,7 @@ def sample_auth_token():
 @pytest.fixture
 def mock_jwt():
     """Mock JWT functions for testing."""
-    with patch('core.auth.jwt') as mock_jwt:
+    with patch("core.auth.jwt") as mock_jwt:
         mock_jwt.encode.return_value = "mock_token"
         mock_jwt.decode.return_value = {"sub": "testuser", "exp": 1617296000}
         yield mock_jwt

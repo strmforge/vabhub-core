@@ -5,7 +5,15 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Optional
 
-from .metadata_manager import MetadataManager, MediaType, MediaEntity, Movie, TVShow, Season, Episode
+from .metadata_manager import (
+    MetadataManager,
+    MediaType,
+    MediaEntity,
+    Movie,
+    TVShow,
+    Season,
+    Episode,
+)
 from .auth import get_current_user
 
 router = APIRouter(prefix="/metadata", tags=["Metadata"])
@@ -20,10 +28,10 @@ def get_metadata_manager() -> MetadataManager:
     if metadata_manager is None:
         # 从配置中获取API密钥
         config = {
-            'tmdb_api_key': 'your_tmdb_api_key_here',  # 应该从环境变量获取
-            'douban_enabled': False,
-            'provider_priority': ['tmdb'],
-            'cache_dir': './cache'
+            "tmdb_api_key": "your_tmdb_api_key_here",  # 应该从环境变量获取
+            "douban_enabled": False,
+            "provider_priority": ["tmdb"],
+            "cache_dir": "./cache",
         }
         metadata_manager = MetadataManager(config)
     return metadata_manager
@@ -34,7 +42,7 @@ async def search_media(
     query: str,
     media_type: str = Query("movie", description="媒体类型: movie, tv"),
     language: str = Query("zh-CN", description="语言代码"),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """搜索媒体"""
     try:
@@ -49,7 +57,7 @@ async def search_media(
 async def get_movie(
     movie_id: str,
     language: str = Query("zh-CN", description="语言代码"),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """获取电影详情"""
     try:
@@ -68,7 +76,7 @@ async def get_movie(
 async def get_tv_show(
     tv_id: str,
     language: str = Query("zh-CN", description="语言代码"),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """获取电视剧详情"""
     try:
@@ -88,7 +96,7 @@ async def get_season(
     tv_id: str,
     season_number: int,
     language: str = Query("zh-CN", description="语言代码"),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """获取季详情"""
     try:
@@ -103,18 +111,23 @@ async def get_season(
         raise HTTPException(status_code=500, detail=f"Failed to get season: {e}")
 
 
-@router.get("/tv/{tv_id}/season/{season_number}/episode/{episode_number}", response_model=Episode)
+@router.get(
+    "/tv/{tv_id}/season/{season_number}/episode/{episode_number}",
+    response_model=Episode,
+)
 async def get_episode(
     tv_id: str,
     season_number: int,
     episode_number: int,
     language: str = Query("zh-CN", description="语言代码"),
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user),
 ):
     """获取剧集详情"""
     try:
         manager = get_metadata_manager()
-        episode = await manager.get_episode(tv_id, season_number, episode_number, language)
+        episode = await manager.get_episode(
+            tv_id, season_number, episode_number, language
+        )
         if not episode:
             raise HTTPException(status_code=404, detail="Episode not found")
         return episode
@@ -128,10 +141,7 @@ async def get_episode(
 async def get_providers(current_user: dict = Depends(get_current_user)):
     """获取支持的元数据提供者"""
     manager = get_metadata_manager()
-    return {
-        "providers": list(manager.providers.keys()),
-        "priority": manager.priority
-    }
+    return {"providers": list(manager.providers.keys()), "priority": manager.priority}
 
 
 @router.post("/cache/clear")
@@ -148,5 +158,5 @@ async def get_config(current_user: dict = Depends(get_current_user)):
     return {
         "providers": list(manager.providers.keys()),
         "priority": manager.priority,
-        "cache_dir": manager.cache_dir
+        "cache_dir": manager.cache_dir,
     }
