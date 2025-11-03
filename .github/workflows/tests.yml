@@ -41,7 +41,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pytest pytest-asyncio pytest-cov pytest-html pytest-xdist
-        pip install httpx redis
+        pip install httpx redis aiohttp feedparser qbittorrent-api pyjwt aiohttp feedparser qbittorrent-api pyjwt aiohttp feedparser qbittorrent-api pyjwt
 
     - name: Run unit tests
       run: |
