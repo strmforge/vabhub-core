@@ -5,7 +5,7 @@ AI驱动内容推荐系统
 """
 
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import json
@@ -13,8 +13,7 @@ import time
 from datetime import datetime
 from sklearn.metrics.pairwise import cosine_similarity
 import faiss  # 高性能相似度搜索
-import pickle
-import os
+
 from collections import defaultdict
 from threading import Lock
 import sqlite3
