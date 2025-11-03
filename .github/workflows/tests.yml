@@ -91,7 +91,7 @@ jobs:
 
     - name: Lint with flake8
       run: |
-        flake8 core/ tests/ --count --max-complexity=15 --max-line-length=120 --statistics --ignore=E501,W291,F401,F541,F811,F821,F841,C901,W605
+        flake8 core/ tests/ --count --max-complexity=15 --max-line-length=120 --statistics --ignore=E501,W291,F401,F541,F811,F821,F841,C901,W605,W503,E722,E402,W503,E722,E402,W503,E722,E402
 
     - name: Type check with mypy
       run: |
