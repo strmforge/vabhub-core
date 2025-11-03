@@ -83,7 +83,7 @@ jobs:
 
     - name: Install linting tools
       run: |
-        pip install black flake8 mypy
+        pip install black flake8 mypy types-redis types-PyYAML types-psutil types-aiohttp types-requests
 
     - name: Check code formatting with black
       run: |
