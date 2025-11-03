@@ -25,14 +25,14 @@ class TestIntegrationBasic:
         # 测试主要API端点是否存在
         endpoints = [
             "/api/subscriptions",
-            "/api/tasks", 
+            "/api/tasks",
             "/api/scraper/config",
             "/api/library/servers",
             "/api/dl/instances",
             "/api/storage/status",
-            "/api/strm/files"
+            "/api/strm/files",
         ]
-        
+
         for endpoint in endpoints:
             response = test_client.get(endpoint)
             # 端点应该返回200或422（参数验证错误）
@@ -43,7 +43,7 @@ class TestIntegrationBasic:
         # 测试无效参数
         response = test_client.get("/api/charts?source=invalid&region=XX")
         assert response.status_code == 422
-        
+
         # 测试缺少参数
         response = test_client.get("/api/charts")
         assert response.status_code == 422

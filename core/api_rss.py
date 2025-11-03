@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Dict, Any
 
 from .rss_engine import RSSManager, RSSRule, RSSItem
+
 # from .auth import get_current_user  # Commented out for now
 
 router = APIRouter(prefix="/rss", tags=["RSS"])
@@ -32,10 +33,7 @@ async def add_feed(
 @router.get("/feeds", response_model=List[Dict[str, Any]])
 async def get_feeds():
     """获取所有RSS源"""
-    return [
-        {"name": name, **info}
-        for name, info in rss_manager.feeds.items()
-    ]
+    return [{"name": name, **info} for name, info in rss_manager.feeds.items()]
 
 
 @router.post("/rules", response_model=Dict[str, Any])
@@ -82,7 +80,7 @@ async def delete_feed(
     """删除RSS源"""
     if name not in rss_manager.feeds:
         raise HTTPException(status_code=404, detail="Feed not found")
-    
+
     del rss_manager.feeds[name]
     return {"message": f"RSS feed '{name}' deleted successfully"}
 
@@ -97,5 +95,5 @@ async def delete_rule(
         if rule.name == name:
             rss_manager.rules.pop(i)
             return {"message": f"RSS rule '{name}' deleted successfully"}
-    
+
     raise HTTPException(status_code=404, detail="Rule not found")
