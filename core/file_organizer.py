@@ -367,7 +367,9 @@ class FileOrganizer:
 
         return results
 
-    def preview_organization(self, directory: Optional[str] = None) -> List[Dict[str, Any]]:
+    def preview_organization(
+        self, directory: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """预览整理结果"""
         file_infos = self.scan_directory(directory)
         previews = []

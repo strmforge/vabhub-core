@@ -94,7 +94,8 @@ class AIRecommendationSystem:
             self.cursor = self.conn.cursor()
 
             # 创建用户交互表
-            self.cursor.execute("""
+            self.cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS user_interactions (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id TEXT NOT NULL,
@@ -104,10 +105,12 @@ class AIRecommendationSystem:
                     metadata TEXT,
                     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             # 创建用户偏好表
-            self.cursor.execute("""
+            self.cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS user_preferences (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     user_id TEXT NOT NULL,
@@ -115,7 +118,8 @@ class AIRecommendationSystem:
                     preference_value REAL DEFAULT 0.0,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
-            """)
+            """
+            )
 
             self.conn.commit()
 
@@ -148,27 +152,40 @@ class AIRecommendationSystem:
                 # 记录到数据库
                 if self.cursor:
                     metadata_json = json.dumps(metadata) if metadata else None
-                    self.cursor.execute("""
+                    self.cursor.execute(
+                        """
                         INSERT INTO user_interactions 
                         (user_id, media_id, interaction_type, interaction_value, metadata)
                         VALUES (?, ?, ?, ?, ?)
-                    """, (user_id, media_id, interaction_type, interaction_value, metadata_json))
+                    """,
+                        (
+                            user_id,
+                            media_id,
+                            interaction_type,
+                            interaction_value,
+                            metadata_json,
+                        ),
+                    )
                     self.conn.commit()
 
                 # 更新内存缓存
                 if user_id not in self.user_interactions:
                     self.user_interactions[user_id] = []
 
-                self.user_interactions[user_id].append({
-                    "media_id": media_id,
-                    "interaction_type": interaction_type,
-                    "interaction_value": interaction_value,
-                    "metadata": metadata,
-                    "timestamp": datetime.now()
-                })
+                self.user_interactions[user_id].append(
+                    {
+                        "media_id": media_id,
+                        "interaction_type": interaction_type,
+                        "interaction_value": interaction_value,
+                        "metadata": metadata,
+                        "timestamp": datetime.now(),
+                    }
+                )
 
                 # 更新用户偏好
-                self._update_user_preferences(user_id, media_id, interaction_type, interaction_value)
+                self._update_user_preferences(
+                    user_id, media_id, interaction_type, interaction_value
+                )
 
                 return True
 
@@ -177,7 +194,11 @@ class AIRecommendationSystem:
             return False
 
     def _update_user_preferences(
-        self, user_id: str, media_id: str, interaction_type: str, interaction_value: float
+        self,
+        user_id: str,
+        media_id: str,
+        interaction_type: str,
+        interaction_value: float,
     ) -> None:
         """更新用户偏好"""
         try:
@@ -190,7 +211,7 @@ class AIRecommendationSystem:
                 "like": 1.0,
                 "dislike": -1.0,
                 "download": 0.5,
-                "share": 0.8
+                "share": 0.8,
             }
 
             weight = weight_map.get(interaction_type, 0.1) * interaction_value
@@ -204,7 +225,10 @@ class AIRecommendationSystem:
             logger.error(f"更新用户偏好失败: {e}")
 
     def get_personalized_recommendations(
-        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
+        self,
+        user_id: str,
+        query_text: Optional[str] = None,
+        top_k: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -244,9 +268,12 @@ class AIRecommendationSystem:
                 self.media_items.extend(media_items)
 
                 # 生成嵌入向量
-                texts = [item.get("title", "") + " " + item.get("description", "") for item in media_items]
+                texts = [
+                    item.get("title", "") + " " + item.get("description", "")
+                    for item in media_items
+                ]
                 embeddings = self.model.encode(texts) if self.model else []
-                
+
                 if isinstance(embeddings, np.ndarray):
                     self.embeddings.extend(embeddings.tolist())
                 else:

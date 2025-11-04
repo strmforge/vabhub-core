@@ -28,6 +28,7 @@ from .api_websocket import router as websocket_router
 from .ai_recommendation_api import router as ai_recommendation_router
 from .api_subscription import router as subscription_router
 from .api_file_organizer import router as file_organizer_router
+
 # # # # from .graphql_api import GraphQLAPI  # GraphQLAPI 暂时未实现  # GraphQLAPI 暂时未实现  # GraphQLAPI 暂时未实现  # GraphQLAPI 暂时未实现
 from .exceptions import exception_handler
 from .logging_config import get_logger
@@ -105,7 +106,9 @@ class VabHubAPI:
         self.auth_manager: AuthManager = AuthManager(config.SECRET_KEY)
         self.db_manager: DatabaseManager = DatabaseManager(config.DATABASE_URL)
         self.media_server_manager: MediaServerManager = MediaServerManager(config)
-        self.strm_gateway_manager: STRMGatewayManager = STRMGatewayManager(config.to_dict())
+        self.strm_gateway_manager: STRMGatewayManager = STRMGatewayManager(
+            config.to_dict()
+        )
         self.charts_service: ChartsService = ChartsService(config)
         # self.graphql_api: GraphQLAPI = GraphQLAPI(config)  # GraphQLAPI 暂时未实现
 
