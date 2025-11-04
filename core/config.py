@@ -3,7 +3,7 @@ Core configuration module for VabHub
 """
 
 import os
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # 导入统一配置
 from .config_manager import get_config
@@ -42,6 +42,18 @@ class Config:
 
     # Logging settings
     LOG_LEVEL = _unified_config.logging.level
+
+    # JWT settings
+    ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+    # JWT settings
+    ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+    # JWT settings
+    ALGORITHM = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
     @classmethod
     def to_dict(cls) -> Dict[str, Any]:

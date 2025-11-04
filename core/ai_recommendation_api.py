@@ -382,7 +382,11 @@ async def set_user_preferences(preferences: UserPreferenceRequest = Body(...)):
             "success": True,
             "message": "用户偏好设置成功",
             "user_id": preferences.user_id,
-            "preferences_count": len(user_preferences["preferences"]) if user_preferences["preferences"] else 0,
+            "preferences_count": (
+                len(user_preferences["preferences"])
+                if user_preferences["preferences"]
+                else 0
+            ),
             "timestamp": datetime.now(),
         }
 
