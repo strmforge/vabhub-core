@@ -169,11 +169,11 @@ class VabHubAPI:
         # Health and basic info
         @self.app.get("/")
         async def root():
-            return {"message": "VabHub Core API", "version": "1.5.0"}
+            return {"message": "VabHub Charts API", "version": "1.5.0"}
 
         @self.app.get("/health")
         async def health_check():
-            return {"status": "healthy", "service": "vabhub-core"}
+            return {"status": "healthy", "version": "1.5.0"}
 
         @self.app.get("/config")
         async def get_config():
