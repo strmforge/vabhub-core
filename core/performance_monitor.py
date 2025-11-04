@@ -10,9 +10,8 @@ import psutil
 import logging
 from dataclasses import dataclass
 from collections import deque, defaultdict
-from typing import Deque
+from typing import Any
 from enum import Enum
-from typing import Dict, List, Optional, Any
 
 
 class MetricType(Enum):
@@ -35,7 +34,7 @@ class PerformanceMetric:
     timestamp: float
     metric_type: MetricType
     value: float
-    tags: Optional[Dict[str, str]] = None
+    tags: dict[str, str] | None = None
 
 
 @dataclass
@@ -64,12 +63,12 @@ class PerformanceMonitor:
     """性能监控器"""
 
     def __init__(self, history_size: int = 1000):
-        self.history_size = history_size
-        self.metrics_history: Dict[MetricType, Deque[PerformanceMetric]] = defaultdict(
+        self.history_size: int = history_size
+        self.metrics_history: dict[MetricType, deque[PerformanceMetric]] = defaultdict(
             lambda: deque(maxlen=history_size)
         )
-        self.stats: Dict[MetricType, PerformanceStats] = {}
-        self.logger = logging.getLogger(__name__)
+        self.stats: dict[MetricType, PerformanceStats] = {}
+        self.logger: logging.Logger = logging.getLogger(__name__)
 
         # 初始化统计信息
         for metric_type in MetricType:
@@ -112,7 +111,7 @@ class PerformanceMonitor:
         self,
         metric_type: MetricType,
         value: float,
-        tags: Optional[Dict[str, str]] = None,
+        tags: dict[str, str] | None = None,
     ):
         """记录性能指标"""
         timestamp = time.time()
@@ -148,8 +147,8 @@ class PerformanceMonitor:
             await self.record_metric(MetricType.CACHE_HIT_RATE, hit_rate)
 
     async def get_metrics_history(
-        self, metric_type: MetricType, limit: Optional[int] = None
-    ) -> List[PerformanceMetric]:
+        self, metric_type: MetricType, limit: int | None = None
+    ) -> list[PerformanceMetric]:
         """获取指标历史记录"""
         if metric_type not in self.metrics_history:
             return []
@@ -162,13 +161,13 @@ class PerformanceMonitor:
         """获取性能统计信息"""
         return self.stats[metric_type]
 
-    async def get_all_stats(self) -> Dict[MetricType, PerformanceStats]:
+    async def get_all_stats(self) -> dict[MetricType, PerformanceStats]:
         """获取所有性能统计信息"""
         return self.stats.copy()
 
-    async def analyze_performance(self) -> Dict[str, Any]:
+    async def analyze_performance(self) -> dict[str, Any]:
         """性能分析"""
-        analysis = {"recommendations": [], "warnings": [], "metrics_summary": {}}
+        analysis: dict[str, Any] = {"recommendations": [], "warnings": [], "metrics_summary": {}}
 
         # 分析各项指标
         for metric_type, stats in self.stats.items():

@@ -5,17 +5,18 @@
 import os
 import re
 import shutil
+import logging
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime
+from typing import Any
 
 
 class PathManager:
     """路径管理器，负责文件路径的优化和管理"""
 
     def __init__(self, base_path: str):
-        self.base_path = Path(base_path)
+        self.base_path: Path = Path(base_path)
         self.base_path.mkdir(parents=True, exist_ok=True)
+        self.logger: logging.Logger = logging.getLogger(__name__)
 
     def sanitize_filename(self, filename: str) -> str:
         """
@@ -43,7 +44,7 @@ class PathManager:
 
         return sanitized
 
-    def get_unique_filename(self, filepath: str) -> Path:
+    def get_unique_filename(self, filepath: str) -> str:
         """
         获取唯一的文件名，避免冲突
 
@@ -57,7 +58,7 @@ class PathManager:
 
         # 如果文件不存在，直接返回
         if not path.exists():
-            return path
+            return str(path)
 
         # 如果文件存在，添加后缀
         stem = path.stem
@@ -70,7 +71,7 @@ class PathManager:
             new_path = parent / new_filename
 
             if not new_path.exists():
-                return new_path
+                return str(new_path)
 
             counter += 1
 
@@ -134,12 +135,12 @@ class PathManager:
 
             return True
         except Exception as e:
-            print(f"创建链接失败: {e}")
+            self.logger.error(f"创建链接失败: {e}")
             return False
 
     def batch_rename(
-        self, files: List[Dict[str, Any]], template: str
-    ) -> List[Dict[str, Any]]:
+        self, files: list[dict[str, Any]], template: str
+    ) -> list[dict[str, Any]]:
         """
         批量重命名文件
 
@@ -155,14 +156,14 @@ class PathManager:
         for file_info in files:
             try:
                 # 根据媒体类型应用不同的重命名策略
-                media_type = file_info.get("type", "other")
+                media_type: str = file_info.get("type", "other")
 
                 if media_type == "music":
                     # 音乐文件重命名：艺术家 - 专辑 - 曲目编号 - 曲目标题
-                    artist = file_info.get("artist", "Unknown Artist")
-                    album = file_info.get("album", "Unknown Album")
-                    track = file_info.get("track", 0)
-                    title = file_info.get("title", "Unknown Title")
+                    artist: str = file_info.get("artist", "Unknown Artist")
+                    album: str = file_info.get("album", "Unknown Album")
+                    track: int = file_info.get("track", 0)
+                    title: str = file_info.get("title", "Unknown Title")
 
                     # 清理文件名
                     artist = self.sanitize_filename(artist)
@@ -174,10 +175,10 @@ class PathManager:
 
                 elif media_type == "movie":
                     # 电影文件重命名：标题.年份.质量.编码
-                    title = file_info.get("title", "Unknown Movie")
-                    year = file_info.get("year", "")
-                    quality = file_info.get("quality", "")
-                    codec = file_info.get("codec", "")
+                    title: str = file_info.get("title", "Unknown Movie")
+                    year: str = file_info.get("year", "")
+                    quality: str = file_info.get("quality", "")
+                    codec: str = file_info.get("codec", "")
 
                     title = self.sanitize_filename(title)
                     new_filename = f"{title}"
@@ -205,11 +206,11 @@ class PathManager:
 
                 else:
                     # 其他类型文件使用简单重命名
-                    title = file_info.get("title", "Unknown")
+                    title: str = file_info.get("title", "Unknown")
                     new_filename = self.sanitize_filename(title)
 
                 # 添加文件扩展名
-                extension = file_info.get("extension", "")
+                extension: str = file_info.get("extension", "")
                 if extension:
                     new_filename += f".{extension}"
 
@@ -220,7 +221,8 @@ class PathManager:
                 new_path = original_path.parent / new_filename
 
                 # 确保文件名唯一
-                new_path = self.get_unique_filename(new_path)
+                unique_filename = self.get_unique_filename(str(new_path))
+                new_path = Path(unique_filename)
 
                 # 重命名文件
                 original_path.rename(new_path)
@@ -246,7 +248,7 @@ class PathManager:
 
         return results
 
-    def _render_template(self, template: str, file_info: Dict[str, Any]) -> str:
+    def _render_template(self, template: str, file_info: dict[str, Any]) -> str:
         """
         渲染命名模板
 
@@ -283,7 +285,7 @@ class PathManager:
 
         return filename
 
-    def find_duplicates(self, directory: str) -> List[Tuple[str, str]]:
+    def find_duplicates(self, directory: str) -> list[tuple[str, str]]:
         """
         查找重复文件
 
@@ -293,8 +295,8 @@ class PathManager:
         Returns:
             重复文件对列表
         """
-        duplicates = []
-        file_hashes = {}
+        duplicates: list[tuple[str, str]] = []
+        file_hashes: dict[str, Path] = {}
 
         dir_path = Path(directory)
 
@@ -328,7 +330,7 @@ class PathManager:
 
         return hashlib.md5(hash_data.encode()).hexdigest()
 
-    def cleanup_empty_dirs(self, directory: str) -> List[str]:
+    def cleanup_empty_dirs(self, directory: str) -> list[str]:
         """
         清理空目录
 
@@ -338,7 +340,7 @@ class PathManager:
         Returns:
             被删除的目录列表
         """
-        removed_dirs = []
+        removed_dirs: list[str] = []
         dir_path = Path(directory)
 
         for root, dirs, files in os.walk(dir_path, topdown=False):
@@ -362,7 +364,7 @@ class FileOrganizer:
     def __init__(self, path_manager: PathManager):
         self.path_manager = path_manager
 
-    def organize_media_files(self, source_dir: str, target_base: str) -> Dict[str, Any]:
+    def organize_media_files(self, source_dir: str, target_base: str) -> dict[str, Any]:
         """
         组织媒体文件
 
@@ -373,7 +375,7 @@ class FileOrganizer:
         Returns:
             组织结果
         """
-        results = {"processed": 0, "success": 0, "errors": [], "moved_files": []}
+        results: dict[str, Any] = {"processed": 0, "success": 0, "errors": [], "moved_files": []}
 
         source_path = Path(source_dir)
 
@@ -391,8 +393,8 @@ class FileOrganizer:
                     # 移动文件
                     shutil.move(str(file_path), str(target_path))
 
-                    results["processed"] = results["processed"] + 1
-                    results["success"] = results["success"] + 1
+                    results["processed"] = results["processed"] + 1  # type: ignore
+                    results["success"] = results["success"] + 1  # type: ignore
                     results["moved_files"].append(
                         {
                             "source": str(file_path),
@@ -402,7 +404,7 @@ class FileOrganizer:
                     )
 
                 except Exception as e:
-                    results["processed"] = results["processed"] + 1
+                    results["processed"] = results["processed"] + 1  # type: ignore
                     results["errors"].append({"file": str(file_path), "error": str(e)})
 
         return results

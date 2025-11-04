@@ -3,7 +3,7 @@ HNR检测器 - 智能检测和阻止H&R/H3/H5等PT规则
 """
 
 import re
-import yaml
+import yaml  # type: ignore
 from typing import Dict, Any, List, Optional, Union
 from pathlib import Path
 import logging
@@ -37,9 +37,9 @@ class HNRDetector:
     """HNR检测器"""
 
     def __init__(self, signature_pack_path: Optional[str] = None):
-        self.signatures = {}
-        self.site_overrides = {}
-        self.version = 0
+        self.signatures: Dict[str, Any] = {}
+        self.site_overrides: Dict[str, Any] = {}
+        self.version: int = 0
 
         if signature_pack_path:
             self.load_signatures(signature_pack_path)

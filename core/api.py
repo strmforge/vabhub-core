@@ -3,7 +3,6 @@ API module for VabHub Core
 """
 
 import logging
-import logging
 from typing import Any
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel

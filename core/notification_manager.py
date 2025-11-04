@@ -40,10 +40,10 @@ class NotificationMessage:
     title: str
     message: str
     priority: NotificationPriority = NotificationPriority.NORMAL
-    channels: List[NotificationChannel] = None
-    metadata: Dict[str, Any] = None
-    template: str = None
-    created_at: datetime = None
+    channels: Optional[List[NotificationChannel]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    template: Optional[str] = None
+    created_at: Optional[datetime] = None
 
     def __post_init__(self):
         if self.channels is None:
@@ -59,17 +59,17 @@ class NotificationMessage:
             "title": self.title,
             "message": self.message,
             "priority": self.priority.value,
-            "channels": [channel.value for channel in self.channels],
+            "channels": [channel.value for channel in self.channels] if self.channels else [],
             "metadata": self.metadata,
             "template": self.template,
-            "created_at": self.created_at.isoformat(),
+            "created_at": self.created_at.isoformat() if self.created_at else "",
         }
 
 
 class NotificationTemplate:
     """通知模板"""
 
-    def __init__(self, name: str, template: str, variables: List[str] = None):
+    def __init__(self, name: str, template: str, variables: Optional[List[str]] = None):
         self.name = name
         self.template = template
         self.variables = variables or []
@@ -106,11 +106,11 @@ class ConsoleChannel(BaseNotificationChannel):
 
     async def send(self, message: NotificationMessage) -> bool:
         try:
-            print(
+            self.logger.info(
                 f"[{message.priority.value.upper()}] {message.title}: {message.message}"
             )
             if message.metadata:
-                print(f"Metadata: {json.dumps(message.metadata, indent=2)}")
+                self.logger.debug(f"Metadata: {json.dumps(message.metadata, indent=2)}")
             return True
         except Exception as e:
             self.logger.error(f"Failed to send console notification: {e}")
@@ -254,16 +254,18 @@ class NotificationManager:
 
             # 发送到指定渠道
             success_count = 0
-            for channel_name in message.channels:
-                channel = self.channels.get(channel_name.value)
-                if channel and channel.enabled:
-                    success = await channel.send(message)
-                    if success:
-                        success_count += 1
+            if message.channels:
+                for channel_name in message.channels:
+                    channel = self.channels.get(channel_name.value)
+                    if channel and channel.enabled:
+                        success = await channel.send(message)
+                        if success:
+                            success_count += 1
 
-            self.logger.info(
-                f"Notification sent to {success_count}/{len(message.channels)} channels"
-            )
+            if message.channels:
+                self.logger.info(
+                    f"Notification sent to {success_count}/{len(message.channels)} channels"
+                )
 
         except Exception as e:
             self.logger.error(f"Failed to process notification: {e}")
@@ -345,7 +347,7 @@ async def send_success_notification(
     manager: NotificationManager,
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """发送成功通知"""
     msg = NotificationMessage(
@@ -361,7 +363,7 @@ async def send_error_notification(
     manager: NotificationManager,
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """发送错误通知"""
     msg = NotificationMessage(
@@ -377,7 +379,7 @@ async def send_warning_notification(
     manager: NotificationManager,
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """发送警告通知"""
     msg = NotificationMessage(
@@ -393,7 +395,7 @@ async def send_info_notification(
     manager: NotificationManager,
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ) -> bool:
     """发送信息通知"""
     msg = NotificationMessage(

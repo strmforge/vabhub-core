@@ -118,7 +118,7 @@ class StorageManager:
                 self.storage_status[storage_name] = StorageStatus.ERROR
 
     async def upload_file(
-        self, file_path: str, target_path: str, storage_name: str = None, **kwargs
+        self, file_path: str, target_path: str, storage_name: Optional[str] = None, **kwargs
     ) -> Dict[str, Any]:
         """上传文件到存储"""
         try:
@@ -126,6 +126,8 @@ class StorageManager:
                 return {"error": "Source file does not exist"}
 
             # 选择存储
+            if storage_name is None:
+                storage_name = "default"
             selected_storage = await self._select_storage(
                 storage_name, target_path, **kwargs
             )
@@ -150,11 +152,13 @@ class StorageManager:
             return {"error": str(e)}
 
     async def download_file(
-        self, source_path: str, target_path: str, storage_name: str = None, **kwargs
+        self, source_path: str, target_path: str, storage_name: Optional[str] = None, **kwargs
     ) -> Dict[str, Any]:
         """从存储下载文件"""
         try:
             # 选择存储
+            if storage_name is None:
+                storage_name = "default"
             selected_storage = await self._select_storage(
                 storage_name, source_path, **kwargs
             )
@@ -176,11 +180,13 @@ class StorageManager:
             return {"error": str(e)}
 
     async def delete_file(
-        self, file_path: str, storage_name: str = None, **kwargs
+        self, file_path: str, storage_name: Optional[str] = None, **kwargs
     ) -> Dict[str, Any]:
         """删除存储中的文件"""
         try:
             # 选择存储
+            if storage_name is None:
+                storage_name = "default"
             selected_storage = await self._select_storage(
                 storage_name, file_path, **kwargs
             )
@@ -205,13 +211,15 @@ class StorageManager:
     async def list_files(
         self,
         path: str = "",
-        storage_name: str = None,
+        storage_name: Optional[str] = None,
         recursive: bool = False,
         **kwargs,
     ) -> Dict[str, Any]:
         """列出存储中的文件"""
         try:
             # 选择存储
+            if storage_name is None:
+                storage_name = "default"
             selected_storage = await self._select_storage(storage_name, path, **kwargs)
             if not selected_storage:
                 return {"error": "No suitable storage available"}
@@ -228,11 +236,13 @@ class StorageManager:
             return {"error": str(e)}
 
     async def get_file_info(
-        self, file_path: str, storage_name: str = None, **kwargs
+        self, file_path: str, storage_name: Optional[str] = None, **kwargs
     ) -> Dict[str, Any]:
         """获取文件信息"""
         try:
             # 选择存储
+            if storage_name is None:
+                storage_name = "default"
             selected_storage = await self._select_storage(
                 storage_name, file_path, **kwargs
             )
@@ -250,10 +260,10 @@ class StorageManager:
             self.logger.error(f"Get file info failed: {e}")
             return {"error": str(e)}
 
-    async def get_storage_stats(self, storage_name: str = None) -> Dict[str, Any]:
+    async def get_storage_stats(self, storage_name: Optional[str] = None) -> Dict[str, Any]:
         """获取存储统计信息"""
         try:
-            if storage_name:
+            if storage_name is not None:
                 if storage_name not in self.storage_configs:
                     return {"error": "Storage not found"}
 
@@ -302,12 +312,12 @@ class StorageManager:
             return {"error": str(e)}
 
     async def _select_storage(
-        self, storage_name: str = None, path: str = "", **kwargs
+        self, storage_name: Optional[str] = None, path: str = "", **kwargs
     ) -> Optional[str]:
         """选择合适的存储"""
         try:
             # 如果指定了存储名称，直接使用
-            if storage_name:
+            if storage_name is not None:
                 if (
                     storage_name in self.storage_configs
                     and self.storage_status.get(storage_name) == StorageStatus.AVAILABLE

@@ -70,7 +70,7 @@ class UserFeedbackRequest(BaseModel):
     feedback_type: str = Field(
         ...,
         description="反馈类型: like/dislike/neutral",
-        regex="^(like|dislike|neutral)$",
+        pattern="^(like|dislike|neutral)$",
     )
     user_id: Optional[str] = Field(None, description="用户ID")
     timestamp: datetime = Field(default_factory=datetime.now, description="反馈时间")

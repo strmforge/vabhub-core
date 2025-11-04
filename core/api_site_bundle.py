@@ -6,7 +6,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List, Optional
 from pydantic import BaseModel
-import yaml
+import yaml  # type: ignore
 import json
 import os
 from pathlib import Path

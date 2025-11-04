@@ -5,7 +5,7 @@ VabHub 统一配置管理器
 """
 
 import os
-import yaml
+import yaml  # type: ignore
 import json
 from typing import Dict, Any, Optional, List
 from pathlib import Path

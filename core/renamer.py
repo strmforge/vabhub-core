@@ -6,6 +6,7 @@
 import os
 import re
 import shutil
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List
@@ -17,6 +18,7 @@ class RenameTemplate:
 
     def __init__(self, template: str = "{title}.{year}.{SxxExx}.{codec}.{audio}"):
         self.template = template
+        self.logger = logging.getLogger(__name__)
         self.placeholders = {
             "{title}": "title",
             "{year}": "year",
@@ -248,12 +250,12 @@ class FileRenamer:
             return True
 
         except Exception as e:
-            print(f"Error renaming file: {e}")
+            self.logger.error(f"Error renaming file: {e}")
             return False
 
     def batch_rename(self, directory: str, strategy: str = "move") -> Dict[str, str]:
         """批量重命名目录中的文件"""
-        results: Dict[str, Dict[str, str]] = {}
+        results: Dict[str, str] = {}
 
         dir_path = Path(directory)
         if not dir_path.exists() or not dir_path.is_dir():
@@ -376,11 +378,11 @@ class MediaOrganizer:
         self,
         file_path: str,
         media_info: Dict[str, Any],
-        url: str = None,
+        url: Optional[str] = None,
         generate_strm: bool = False,
     ) -> Dict[str, str]:
         """组织单个媒体文件"""
-        results: Dict[str, Dict[str, str]] = {}
+        results: Dict[str, str] = {}
 
         # 重命名文件
         new_filename = self.renamer.generate_new_filename(
@@ -426,6 +428,6 @@ class MediaOrganizer:
                     file_results = self.organize_media_file(str(file_path), media_info)
                     results[str(file_path)] = file_results
                 except Exception as e:
-                    print(f"Error processing {file_path}: {e}")
+                    self.logger.error(f"Error processing {file_path}: {e}")
 
         return results
