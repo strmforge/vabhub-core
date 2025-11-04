@@ -8,20 +8,36 @@ import logging
 import traceback
 from typing import Any, Dict, Optional, Type, Callable, List, TYPE_CHECKING
 
-# Optional imports for fastapi and pydantic
 if TYPE_CHECKING:
     from fastapi import HTTPException, Request, status
     from fastapi.responses import JSONResponse
     from fastapi.exceptions import RequestValidationError
     from pydantic import ValidationError
 else:
-    # 在运行时提供替代实现
-    HTTPException = None
-    Request = None
-    status = None
-    JSONResponse = None
-    RequestValidationError = None
-    ValidationError = None
+    try:
+        from fastapi import HTTPException, Request, status
+        from fastapi.responses import JSONResponse
+        from fastapi.exceptions import RequestValidationError
+    except ImportError:
+        HTTPException = type("HTTPException", (), {})
+        Request = type("Request", (), {})
+        class MockStatus:
+            HTTP_500_INTERNAL_SERVER_ERROR = 500
+            HTTP_401_UNAUTHORIZED = 401
+            HTTP_403_FORBIDDEN = 403
+            HTTP_404_NOT_FOUND = 404
+            HTTP_422_UNPROCESSABLE_ENTITY = 422
+            HTTP_429_TOO_MANY_REQUESTS = 429
+            HTTP_502_BAD_GATEWAY = 502
+            HTTP_503_SERVICE_UNAVAILABLE = 503
+        status = MockStatus()
+        JSONResponse = type("JSONResponse", (), {})
+        RequestValidationError = type("RequestValidationError", (), {})
+
+    try:
+        from pydantic import ValidationError
+    except ImportError:
+        ValidationError = type("ValidationError", (), {})
 
 
 class VabHubException(Exception):
@@ -159,7 +175,7 @@ class PluginException(VabHubException):
         )
 
 
-def exception_handler(request: Request, exc: Exception) -> JSONResponse:
+def exception_handler(request: "Request", exc: Exception) -> "JSONResponse":
     """全局异常处理器"""
     logger = logging.getLogger(__name__)
 
@@ -174,62 +190,69 @@ def exception_handler(request: Request, exc: Exception) -> JSONResponse:
                 "path": request.url.path,
             },
         )
-        return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
+        if hasattr(JSONResponse, "__call__"):
+            return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
 
     # 处理 FastAPI 验证异常
-    elif isinstance(exc, RequestValidationError):
+    elif hasattr(RequestValidationError, "__call__") and isinstance(
+        exc, RequestValidationError
+    ):
         errors = []
-        for error in exc.errors():
-            errors.append(
-                {
-                    "field": ".".join(str(loc) for loc in error["loc"]),
-                    "message": error["msg"],
-                    "type": error["type"],
-                }
-            )
+        if hasattr(exc, "errors"):
+            for error in exc.errors():
+                errors.append(
+                    {
+                        "field": ".".join(str(loc) for loc in error["loc"]),
+                        "message": error["msg"],
+                        "type": error["type"],
+                    }
+                )
 
         logger.warning(
             f"请求验证失败: {exc}", extra={"path": request.url.path, "errors": errors}
         )
 
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
-                "error": True,
-                "error_code": "VALIDATION_ERROR",
-                "message": "请求参数验证失败",
-                "details": {"errors": errors},
-            },
-        )
+        if hasattr(JSONResponse, "__call__"):
+            return JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                content={
+                    "error": True,
+                    "error_code": "VALIDATION_ERROR",
+                    "message": "请求参数验证失败",
+                    "details": {"errors": errors},
+                },
+            )
 
     # 处理 Pydantic 验证异常
-    elif isinstance(exc, ValidationError):
+    elif hasattr(ValidationError, "__call__") and isinstance(exc, ValidationError):
         errors = []
-        for error in exc.errors():
-            errors.append(
-                {
-                    "field": ".".join(str(loc) for loc in error["loc"]),
-                    "message": error["msg"],
-                    "type": error["type"],
-                }
-            )
+        if hasattr(exc, "errors"):
+            for error in exc.errors():
+                errors.append(
+                    {
+                        "field": ".".join(str(loc) for loc in error["loc"]),
+                        "message": error["msg"],
+                        "type": error["type"],
+                    }
+                )
 
         logger.error(
             f"数据验证失败: {exc}", extra={"path": request.url.path, "errors": errors}
         )
 
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content={
-                "error": True,
-                "error_code": "VALIDATION_ERROR",
-                "message": "数据验证失败",
-                "details": {"errors": errors},
-            },
-        )
+        if hasattr(JSONResponse, "__call__"):
+            return JSONResponse(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                content={
+                    "error": True,
+                    "error_code": "VALIDATION_ERROR",
+                    "message": "数据验证失败",
+                    "details": {"errors": errors},
+                },
+            )
 
     # 处理 FastAPI HTTP 异常
-    elif isinstance(exc, HTTPException):
+    elif hasattr(HTTPException, "__call__") and isinstance(exc, HTTPException):
         logger.warning(
             f"HTTPException: {exc.status_code} - {exc.detail}",
             extra={
@@ -239,15 +262,16 @@ def exception_handler(request: Request, exc: Exception) -> JSONResponse:
             },
         )
 
-        return JSONResponse(
-            status_code=exc.status_code,
-            content={
-                "error": True,
-                "error_code": f"HTTP_{exc.status_code}",
-                "message": exc.detail,
-                "details": {},
-            },
-        )
+        if hasattr(JSONResponse, "__call__"):
+            return JSONResponse(
+                status_code=exc.status_code,
+                content={
+                    "error": True,
+                    "error_code": f"HTTP_{exc.status_code}",
+                    "message": exc.detail,
+                    "details": {},
+                },
+            )
 
     # 处理其他未捕获异常
     else:
@@ -262,20 +286,46 @@ def exception_handler(request: Request, exc: Exception) -> JSONResponse:
         )
 
         # 生产环境下隐藏详细错误信息
-        if request.app.debug:
+        if hasattr(request, 'app') and hasattr(request.app, 'debug') and request.app.debug:
             details = {"traceback": traceback.format_exc()}
         else:
             details = {}
 
+        if hasattr(JSONResponse, "__call__"):
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={
+                    "error": True,
+                    "error_code": "INTERNAL_ERROR",
+                    "message": "服务器内部错误",
+                    "details": details,
+                },
+            )
+    
+    # 默认返回
+    default_response = {
+        "error": True,
+        "error_code": "INTERNAL_ERROR",
+        "message": "服务器内部错误",
+        "details": {},
+    }
+    
+    if hasattr(JSONResponse, "__call__"):
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content={
-                "error": True,
-                "error_code": "INTERNAL_ERROR",
-                "message": "服务器内部错误",
-                "details": details,
-            },
+            content=default_response,
         )
+    else:
+        # 如果连JSONResponse都无法创建，至少要返回一个对象
+        # 这里我们创建一个模拟的响应对象
+        class MockJSONResponse:
+            def __init__(self, status_code, content):
+                self.status_code = status_code
+                self.content = content
+        
+        # 尽管类型不匹配，但在运行时这不会造成问题
+        # 因为这种情况只在缺少fastapi依赖时发生
+        return MockJSONResponse(status.HTTP_500_INTERNAL_SERVER_ERROR, default_response)  # type: ignore
 
 
 def error_handler(func):
