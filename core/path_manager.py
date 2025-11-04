@@ -7,7 +7,7 @@ import re
 import shutil
 import logging
 from pathlib import Path
-from typing import Any, Optional, List, Dict, List, Dict, List, Dict, List, Dict
+from typing import Any, Optional, List, Dict
 
 
 class PathManager:
@@ -175,13 +175,13 @@ class PathManager:
 
                 elif media_type == "movie":
                     # 电影文件重命名：标题.年份.质量.编码
-                    title: str = file_info.get("title", "Unknown Movie")
+                    movie_title: str = file_info.get("title", "Unknown Movie")
                     year: str = file_info.get("year", "")
                     quality: str = file_info.get("quality", "")
                     codec: str = file_info.get("codec", "")
 
-                    title = self.sanitize_filename(title)
-                    new_filename = f"{title}"
+                    movie_title = self.sanitize_filename(movie_title)
+                    new_filename = f"{movie_title}"
                     if year:
                         new_filename += f".{year}"
                     if quality:
@@ -206,8 +206,8 @@ class PathManager:
 
                 else:
                     # 其他类型文件使用简单重命名
-                    title: str = file_info.get("title", "Unknown")
-                    new_filename = self.sanitize_filename(title)
+                    other_title: str = file_info.get("title", "Unknown")
+                    new_filename = self.sanitize_filename(other_title)
 
                 # 添加文件扩展名
                 extension: str = file_info.get("extension", "")
@@ -248,7 +248,7 @@ class PathManager:
 
         return results
 
-    def _render_template(self, template: str, file_info: dict[str, Any]) -> str:
+    def _render_template(self, template: str, file_info: Dict[str, Any]) -> str:
         """
         渲染命名模板
 
@@ -285,7 +285,7 @@ class PathManager:
 
         return filename
 
-    def find_duplicates(self, directory: str) -> list[tuple[str, str]]:
+    def find_duplicates(self, directory: str) -> List[tuple[str, str]]:
         """
         查找重复文件
 
@@ -295,8 +295,8 @@ class PathManager:
         Returns:
             重复文件对列表
         """
-        duplicates: list[tuple[str, str]] = []
-        file_hashes: dict[str, Path] = {}
+        duplicates: List[tuple[str, str]] = []
+        file_hashes: Dict[str, Path] = {}
 
         dir_path = Path(directory)
 
@@ -340,7 +340,7 @@ class PathManager:
         Returns:
             被删除的目录列表
         """
-        removed_dirs: list[str] = []
+        removed_dirs: List[str] = []
         dir_path = Path(directory)
 
         for root, dirs, files in os.walk(dir_path, topdown=False):
@@ -375,7 +375,7 @@ class FileOrganizer:
         Returns:
             组织结果
         """
-        results: dict[str, Any] = {
+        results: Dict[str, Any] = {
             "processed": 0,
             "success": 0,
             "errors": [],
