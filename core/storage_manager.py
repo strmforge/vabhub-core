@@ -118,7 +118,11 @@ class StorageManager:
                 self.storage_status[storage_name] = StorageStatus.ERROR
 
     async def upload_file(
-        self, file_path: str, target_path: str, storage_name: Optional[str] = None, **kwargs
+        self,
+        file_path: str,
+        target_path: str,
+        storage_name: Optional[str] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
         """上传文件到存储"""
         try:
@@ -152,7 +156,11 @@ class StorageManager:
             return {"error": str(e)}
 
     async def download_file(
-        self, source_path: str, target_path: str, storage_name: Optional[str] = None, **kwargs
+        self,
+        source_path: str,
+        target_path: str,
+        storage_name: Optional[str] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
         """从存储下载文件"""
         try:
@@ -260,7 +268,9 @@ class StorageManager:
             self.logger.error(f"Get file info failed: {e}")
             return {"error": str(e)}
 
-    async def get_storage_stats(self, storage_name: Optional[str] = None) -> Dict[str, Any]:
+    async def get_storage_stats(
+        self, storage_name: Optional[str] = None
+    ) -> Dict[str, Any]:
         """获取存储统计信息"""
         try:
             if storage_name is not None:

@@ -59,7 +59,9 @@ class NotificationMessage:
             "title": self.title,
             "message": self.message,
             "priority": self.priority.value,
-            "channels": [channel.value for channel in self.channels] if self.channels else [],
+            "channels": (
+                [channel.value for channel in self.channels] if self.channels else []
+            ),
             "metadata": self.metadata,
             "template": self.template,
             "created_at": self.created_at.isoformat() if self.created_at else "",

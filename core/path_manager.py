@@ -7,7 +7,7 @@ import re
 import shutil
 import logging
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, List, Dict, List, Dict, List, Dict, List, Dict
 
 
 class PathManager:
@@ -139,8 +139,8 @@ class PathManager:
             return False
 
     def batch_rename(
-        self, files: list[dict[str, Any]], template: str
-    ) -> list[dict[str, Any]]:
+        self, files: List[Dict[str, Any]], template: str
+    ) -> List[Dict[str, Any]]:
         """
         批量重命名文件
 
@@ -375,7 +375,12 @@ class FileOrganizer:
         Returns:
             组织结果
         """
-        results: dict[str, Any] = {"processed": 0, "success": 0, "errors": [], "moved_files": []}
+        results: dict[str, Any] = {
+            "processed": 0,
+            "success": 0,
+            "errors": [],
+            "moved_files": [],
+        }
 
         source_path = Path(source_dir)
 

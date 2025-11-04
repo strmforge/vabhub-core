@@ -121,7 +121,11 @@ class STRMGatewayManager:
         """Organize STRM files based on rules"""
         try:
             strm_files = self.scan_library_for_strm_files()
-            organized_files: Dict[str, Any] = {"movies": [], "tv_shows": [], "other": []}
+            organized_files: Dict[str, Any] = {
+                "movies": [],
+                "tv_shows": [],
+                "other": [],
+            }
 
             for strm_file in strm_files:
                 if "error" in strm_file:
@@ -198,7 +202,11 @@ class STRMGatewayManager:
         self, media_list: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """Batch generate STRM files for multiple media items"""
-        results: Dict[str, Any] = {"success": [], "failed": [], "total": len(media_list)}
+        results: Dict[str, Any] = {
+            "success": [],
+            "failed": [],
+            "total": len(media_list),
+        }
 
         for media_info in media_list:
             try:
@@ -268,7 +276,9 @@ class STRMPlugin:
         operation = data.get("operation", "")
 
         if operation == "generate_strm":
-            return {"strm_path": self.manager.generate_strm_file(data.get("media_info", {}))}
+            return {
+                "strm_path": self.manager.generate_strm_file(data.get("media_info", {}))
+            }
         elif operation == "scan_library":
             return {"strm_files": self.manager.scan_library_for_strm_files()}
         elif operation == "organize_files":

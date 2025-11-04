@@ -40,7 +40,7 @@ class TestPathManager:
     def test_sanitize_filename(self, path_manager):
         """测试文件名清理"""
         # 测试特殊字符清理
-        dirty_name = "file/with\invalid:characters*?\"<>|"
+        dirty_name = 'file/with\invalid:characters*?"<>|'
         clean_name = path_manager.sanitize_filename(dirty_name)
         assert "/" not in clean_name
         assert "\\" not in clean_name
@@ -107,12 +107,14 @@ class TestPathManager:
                 "album": "Test Album",
                 "track": 1,
                 "title": "Test Song",
-                "extension": "mp3"
+                "extension": "mp3",
             }
         ]
 
-        results = path_manager.batch_rename(files, "{artist} - {album} - {track:02d} - {title}")
-        
+        results = path_manager.batch_rename(
+            files, "{artist} - {album} - {track:02d} - {title}"
+        )
+
         assert len(results) == 1
         assert results[0]["success"] is True
         assert "Test Artist - Test Album - 01 - Test Song.mp3" in results[0]["new_path"]
@@ -131,12 +133,12 @@ class TestPathManager:
                 "year": "2023",
                 "quality": "1080p",
                 "codec": "H264",
-                "extension": "mkv"
+                "extension": "mkv",
             }
         ]
 
         results = path_manager.batch_rename(files, "{title}.{year}.{quality}.{codec}")
-        
+
         assert len(results) == 1
         assert results[0]["success"] is True
         assert "Test Movie.2023.1080p.H264.mkv" in results[0]["new_path"]
@@ -156,12 +158,14 @@ class TestPathManager:
                 "episode": 1,
                 "quality": "1080p",
                 "codec": "H264",
-                "extension": "mkv"
+                "extension": "mkv",
             }
         ]
 
-        results = path_manager.batch_rename(files, "{title}.S{season:02d}E{episode:02d}.{quality}.{codec}")
-        
+        results = path_manager.batch_rename(
+            files, "{title}.S{season:02d}E{episode:02d}.{quality}.{codec}"
+        )
+
         assert len(results) == 1
         assert results[0]["success"] is True
         assert "Test Show.S01E01.1080p.H264.mkv" in results[0]["new_path"]
@@ -171,7 +175,7 @@ class TestPathManager:
         # 创建相同内容的文件
         file1 = Path(temp_dir) / "file1.txt"
         file2 = Path(temp_dir) / "file2.txt"
-        
+
         file1.write_text("same content")
         file2.write_text("same content")
 
@@ -180,7 +184,7 @@ class TestPathManager:
         file3.write_text("different content")
 
         duplicates = path_manager.find_duplicates(temp_dir)
-        
+
         # 应该找到一对重复文件
         assert len(duplicates) >= 1
         duplicate_pair = duplicates[0]
@@ -199,7 +203,7 @@ class TestPathManager:
         (non_empty_dir / "file.txt").write_text("content")
 
         removed_dirs = path_manager.cleanup_empty_dirs(temp_dir)
-        
+
         # 应该只删除空目录
         assert len(removed_dirs) == 1
         assert "empty_dir" in removed_dirs[0]
@@ -212,13 +216,13 @@ class TestPathManager:
         music_file = Path(temp_dir) / "song.mp3"
         movie_file = Path(temp_dir) / "movie.mkv"
         tv_file = Path(temp_dir) / "tvshow.mkv"
-        
+
         music_file.write_text("music")
         movie_file.write_text("movie")
         tv_file.write_text("tv")
 
         results = path_manager.organize_media_files(temp_dir, temp_dir)
-        
+
         assert results["processed"] == 3
         assert results["success"] == 3
         assert len(results["errors"]) == 0
@@ -246,24 +250,28 @@ class TestPathManager:
         for i in range(100):
             file_path = Path(temp_dir) / f"file_{i}.txt"
             file_path.write_text(f"content {i}")
-            test_files.append({
-                "path": str(file_path),
-                "type": "music",
-                "artist": f"Artist {i}",
-                "album": f"Album {i}",
-                "track": i,
-                "title": f"Song {i}",
-                "extension": "txt"
-            })
+            test_files.append(
+                {
+                    "path": str(file_path),
+                    "type": "music",
+                    "artist": f"Artist {i}",
+                    "album": f"Album {i}",
+                    "track": i,
+                    "title": f"Song {i}",
+                    "extension": "txt",
+                }
+            )
 
         start_time = time.time()
-        results = path_manager.batch_rename(test_files, "{artist} - {album} - {track:02d} - {title}")
+        results = path_manager.batch_rename(
+            test_files, "{artist} - {album} - {track:02d} - {title}"
+        )
         end_time = time.time()
 
         # 验证所有文件都处理完成
         assert len(results) == 100
         assert all(r["success"] for r in results)
-        
+
         # 验证处理时间在合理范围内
         processing_time = end_time - start_time
         assert processing_time < 10.0  # 100个文件应该在10秒内完成
@@ -278,18 +286,20 @@ class TestPathManager:
         # 测试空目录
         empty_dir = Path(temp_dir) / "empty"
         empty_dir.mkdir()
-        
+
         duplicates = path_manager.find_duplicates(str(empty_dir))
         assert len(duplicates) == 0
-        
+
         removed_dirs = path_manager.cleanup_empty_dirs(str(empty_dir))
         assert len(removed_dirs) == 1
 
         # 测试特殊字符文件名
         special_file = Path(temp_dir) / "file with spaces and (parentheses).txt"
         special_file.write_text("content")
-        
-        clean_name = path_manager.sanitize_filename("file with spaces and (parentheses)")
+
+        clean_name = path_manager.sanitize_filename(
+            "file with spaces and (parentheses)"
+        )
         assert " " in clean_name  # 空格应该保留
         assert "(" in clean_name  # 括号应该保留
         assert ")" in clean_name  # 括号应该保留
