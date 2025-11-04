@@ -167,7 +167,7 @@ class PerformanceMonitor:
 
     async def analyze_performance(self) -> Dict[str, Any]:
         """性能分析"""
-        analysis: dict[str, Any] = {
+        analysis: Dict[str, Any] = {
             "recommendations": [],
             "warnings": [],
             "metrics_summary": {},

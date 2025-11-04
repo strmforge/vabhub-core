@@ -7,7 +7,7 @@ import re
 import shutil
 import logging
 from pathlib import Path
-from typing import Any, Optional, List, Dict, Tuple, Tuple
+from typing import Any, Optional, List, Dict, Tuple
 
 
 class PathManager:
@@ -295,7 +295,7 @@ class PathManager:
         Returns:
             重复文件对列表
         """
-        duplicates: List[tuple[str, str]] = []
+        duplicates: List[Tuple[str, str]] = []
         file_hashes: Dict[str, Path] = {}
 
         dir_path = Path(directory)
@@ -330,7 +330,7 @@ class PathManager:
 
         return hashlib.md5(hash_data.encode()).hexdigest()
 
-    def cleanup_empty_dirs(self, directory: str) -> list[str]:
+    def cleanup_empty_dirs(self, directory: str) -> List[str]:
         """
         清理空目录
 
@@ -364,7 +364,7 @@ class FileOrganizer:
     def __init__(self, path_manager: PathManager):
         self.path_manager = path_manager
 
-    def organize_media_files(self, source_dir: str, target_base: str) -> dict[str, Any]:
+    def organize_media_files(self, source_dir: str, target_base: str) -> Dict[str, Any]:
         """
         组织媒体文件
 

@@ -6,7 +6,7 @@ VabHub 统一异常处理模块
 
 import logging
 import traceback
-from typing import Any, Dict, Optional, Type, Callable, Callable, Callable, Callable
+from typing import Any, Dict, Optional, Type, Callable, List
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -292,7 +292,7 @@ def error_handler(func):
 def safe_execute(
     func: Callable,
     default_return: Any = None,
-    exception_types: Optional[list] = None,
+    exception_types: Optional[List] = None,
     log_error: bool = True,
 ):
     """安全执行函数，捕获异常并返回默认值"""
@@ -314,9 +314,9 @@ def safe_execute(
 
 
 async def async_safe_execute(
-    func: callable,
+    func: Callable,
     default_return: Any = None,
-    exception_types: Optional[list] = None,
+    exception_types: Optional[List] = None,
     log_error: bool = True,
 ):
     """异步安全执行函数"""
