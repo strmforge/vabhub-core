@@ -614,10 +614,16 @@ api = VabHubAPI(config)
 app = api.get_app()
 
 
-# 创建全局FastAPI应用实例用于测试
-from .config import Config
+class APIServer:
+    """API Server class for testing purposes"""
+    
+    def __init__(self, config: Optional[Config] = None):
+        self.config = config or Config()
+        self.api = VabHubAPI(self.config)
+        self.app = self.api.get_app()
 
-# 使用默认配置创建API实例
+
+# 兼容重复导入
 config = Config()
 api = VabHubAPI(config)
 app = api.get_app()
