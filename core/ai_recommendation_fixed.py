@@ -254,7 +254,7 @@ class AIRecommendationSystem:
             # 3. 基于协同过滤
 
             # 确保k是整数
-            k_int = int(k) if k is not None else 0
+            k_int = k if k is not None else 0
             return personalized_results[:k_int]
 
         except Exception as e:

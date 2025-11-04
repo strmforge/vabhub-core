@@ -69,7 +69,7 @@ class ProductionConfig(Config):
     LOG_LEVEL = "WARNING"
 
 
-def get_config_by_env(env: str = None) -> Config:
+def get_config_by_env(env: Optional[str] = None) -> Config:
     """根据环境变量获取配置类
 
     Args:

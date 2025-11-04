@@ -478,6 +478,10 @@ def create_graphql_app(config: Optional[Config] = None) -> VabHubGraphQLApp:
         from .config import get_config
 
         config = get_config()
+    
+    # 确保config不是None
+    if config is None:
+        raise ValueError("Configuration cannot be None")
 
     return VabHubGraphQLApp(config)
 

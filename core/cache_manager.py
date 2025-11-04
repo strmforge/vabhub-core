@@ -15,10 +15,15 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Callable
 from pathlib import Path
 
-try:
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
     import redis.asyncio as redis
-except ImportError:
-    redis = None
+else:
+    try:
+        import redis.asyncio as redis
+    except ImportError:
+        redis = None
 
 
 class CacheLevel(Enum):
@@ -360,7 +365,6 @@ class RedisCacheBackend(CacheBackend):
             # 检查连接池状态
             pool_info = {
                 "status": "connected",
-                "max_connections": max_connections,
                 # 不再直接访问内部属性
             }
 

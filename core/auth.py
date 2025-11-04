@@ -5,12 +5,15 @@ Authentication module for VabHub Core
 # Optional import for jwt
 import sys
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:
     import jwt
-except ImportError:
-    jwt = None
+else:
+    try:
+        import jwt
+    except ImportError:
+        jwt = None
 
 
 class AuthManager:

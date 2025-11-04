@@ -259,7 +259,7 @@ class DownloadManager:
             return {}
         else:
             # 汇总所有客户端的信息
-            total_info = {
+            total_info: Dict[str, Any] = {
                 "total_download_speed": 0,
                 "total_upload_speed": 0,
                 "total_downloaded": 0,

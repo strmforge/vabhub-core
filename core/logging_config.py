@@ -7,7 +7,7 @@ import logging.config
 import json
 import sys
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, List, List, List, List, List, List, List
 
 
 class StructuredFormatter(logging.Formatter):

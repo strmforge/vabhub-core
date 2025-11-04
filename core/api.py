@@ -597,3 +597,21 @@ class VabHubAPI:
     def get_app(self) -> FastAPI:
         """Get FastAPI application"""
         return self.app
+
+
+# 创建全局FastAPI应用实例用于测试
+from .config import Config
+
+# 使用默认配置创建API实例
+config = Config()
+api = VabHubAPI(config)
+app = api.get_app()
+
+
+# 创建全局FastAPI应用实例用于测试
+from .config import Config
+
+# 使用默认配置创建API实例
+config = Config()
+api = VabHubAPI(config)
+app = api.get_app()
