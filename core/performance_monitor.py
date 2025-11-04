@@ -10,7 +10,7 @@ import psutil
 import logging
 from dataclasses import dataclass
 from collections import deque, defaultdict
-from typing import Any
+from typing import Any, Optional, Union
 from enum import Enum
 
 
@@ -34,7 +34,7 @@ class PerformanceMetric:
     timestamp: float
     metric_type: MetricType
     value: float
-    tags: dict[str, str] | None = None
+    tags: Optional[dict[str, str]] = None
 
 
 @dataclass
@@ -111,7 +111,7 @@ class PerformanceMonitor:
         self,
         metric_type: MetricType,
         value: float,
-        tags: dict[str, str] | None = None,
+        tags: Optional[dict[str, str]] = None,
     ):
         """记录性能指标"""
         timestamp = time.time()
@@ -147,7 +147,7 @@ class PerformanceMonitor:
             await self.record_metric(MetricType.CACHE_HIT_RATE, hit_rate)
 
     async def get_metrics_history(
-        self, metric_type: MetricType, limit: int | None = None
+        self, metric_type: MetricType, limit: Optional[int] = None
     ) -> list[PerformanceMetric]:
         """获取指标历史记录"""
         if metric_type not in self.metrics_history:

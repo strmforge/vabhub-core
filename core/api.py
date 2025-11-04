@@ -3,7 +3,7 @@ API module for VabHub Core
 """
 
 import logging
-from typing import Any
+from typing import Any, Optional
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from .config import Config
@@ -35,7 +35,7 @@ from .logging_config import get_logger
 
 # Data models for API endpoints
 class Subscription(BaseModel):
-    id: str | None = None
+    id: Optional[str] = None
     name: str
     query: str
     enabled: bool = True
@@ -47,7 +47,7 @@ class RuleSet(BaseModel):
 
 
 class Task(BaseModel):
-    id: str | None = None
+    id: Optional[str] = None
     name: str
     status: str = "pending"
     progress: int = 0
@@ -248,7 +248,7 @@ class VabHubAPI:
 
         # Tasks management
         @self.app.get("/api/tasks", response_model=list[Task])
-        async def list_tasks(status: str | None = None):
+        async def list_tasks(status: Optional[str] = None):
             tasks = self.db_manager.get_tasks(status)
             return [Task(**task) for task in tasks]
 
