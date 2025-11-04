@@ -48,7 +48,7 @@ class APIKeyResponse(BaseModel):
 
 
 class APIKeyListResponse(BaseModel):
-    keys: list[APIKeyResponse]
+    keys: List[APIKeyResponse]
 
 
 # JWT Token生成
