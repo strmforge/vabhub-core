@@ -3,7 +3,7 @@
 """
 
 import json
-import yaml
+import yaml  # type: ignore
 from typing import Dict, Any, List, Optional
 from pathlib import Path
 import logging
@@ -202,7 +202,7 @@ class SiteBundleManager:
 
     def bulk_upsert_bundles(self, bundles_data: List[Dict[str, Any]]) -> Dict[str, Any]:
         """批量创建或更新站点包"""
-        results = {"created": 0, "updated": 0, "errors": 0, "details": []}
+        results: Dict[str, Any] = {"created": 0, "updated": 0, "errors": 0, "details": []}
 
         for bundle_data in bundles_data:
             try:

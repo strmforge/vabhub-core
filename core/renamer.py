@@ -50,7 +50,7 @@ class RenameTemplate:
 class FileRenamer:
     """文件重命名器"""
 
-    def __init__(self, base_path: str, template: str = None):
+    def __init__(self, base_path: str, template: Optional[str] = None):
         self.base_path = Path(base_path)
         self.template = RenameTemplate(
             template or "{title}.{year}.{SxxExx}.{codec}.{audio}"
@@ -97,8 +97,8 @@ class FileRenamer:
         if season_episode_match:
             season = int(season_episode_match.group(1))
             episode = int(season_episode_match.group(2))
-            info["season"] = season
-            info["episode"] = episode
+            info["season"] = str(season)
+            info["episode"] = str(episode)
             info["season_episode"] = f"S{season:02d}E{episode:02d}"
 
         # 提取分辨率
@@ -253,7 +253,7 @@ class FileRenamer:
 
     def batch_rename(self, directory: str, strategy: str = "move") -> Dict[str, str]:
         """批量重命名目录中的文件"""
-        results = {}
+        results: Dict[str, Dict[str, str]] = {}
 
         dir_path = Path(directory)
         if not dir_path.exists() or not dir_path.is_dir():
@@ -368,7 +368,7 @@ class STRMGenerator:
 class MediaOrganizer:
     """媒体文件组织器"""
 
-    def __init__(self, base_path: str, template: str = None):
+    def __init__(self, base_path: str, template: Optional[str] = None):
         self.renamer = FileRenamer(base_path, template)
         self.strm_generator = STRMGenerator(base_path)
 
@@ -380,7 +380,7 @@ class MediaOrganizer:
         generate_strm: bool = False,
     ) -> Dict[str, str]:
         """组织单个媒体文件"""
-        results = {}
+        results: Dict[str, Dict[str, str]] = {}
 
         # 重命名文件
         new_filename = self.renamer.generate_new_filename(
@@ -403,14 +403,14 @@ class MediaOrganizer:
         return results
 
     def scan_and_organize(
-        self, source_dir: str, target_dir: str = None
+        self, source_dir: str, target_dir: Optional[str] = None
     ) -> Dict[str, Dict[str, str]]:
         """扫描并组织目录中的媒体文件"""
         if target_dir:
             self.renamer.base_path = Path(target_dir)
             self.strm_generator.base_path = Path(target_dir)
 
-        results = {}
+        results: Dict[str, Dict[str, str]] = {}
 
         source_path = Path(source_dir)
         if not source_path.exists() or not source_path.is_dir():
