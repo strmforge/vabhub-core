@@ -195,7 +195,7 @@ class ServerChanChannel(NotificationChannel):
             logging.error(f"Failed to send ServerChan notification: {e}")
             return False
 
-    def _format_message(self, message: NotificationMessage) -> tuple[str, str]:
+    def _format_message(self, message: NotificationMessage) -> Tuple[str, str]:
         """格式化消息内容"""
         # 根据消息类型设置标题前缀
         prefix_map = {

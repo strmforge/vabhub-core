@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
@@ -34,7 +34,7 @@ class LoginResponse(BaseModel):
 
 class APIKeyCreateRequest(BaseModel):
     name: str
-    permissions: list[str] = ["read"]
+    permissions: List[str] = ["read"]
     expires_at: Optional[datetime] = None
 
 
@@ -42,7 +42,7 @@ class APIKeyResponse(BaseModel):
     id: str
     name: str
     key: str
-    permissions: list[str]
+    permissions: List[str]
     created_at: datetime
     expires_at: Optional[datetime]
 
