@@ -185,7 +185,9 @@ class SubscriptionManager:
                 continue
 
             # 不能包含排除关键词
-            if rule.exclude_keywords and any(exclude.lower() in title for exclude in rule.exclude_keywords):
+            if rule.exclude_keywords and any(
+                exclude.lower() in title for exclude in rule.exclude_keywords
+            ):
                 continue
 
             # 检查质量要求

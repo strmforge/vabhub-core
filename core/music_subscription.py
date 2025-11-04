@@ -210,19 +210,27 @@ class MusicSubscriptionManager:
                         sync_results["new_content"] = []
                     if isinstance(sync_results["new_content"], list):
                         sync_results["new_content"].extend(new_content)
-                    sync_results["successful"] = int(sync_results.get("successful", 0)) + 1
+                    sync_results["successful"] = (
+                        int(sync_results.get("successful", 0)) + 1
+                    )
                 else:
-                    sync_results["successful"] = int(sync_results.get("successful", 0)) + 1
+                    sync_results["successful"] = (
+                        int(sync_results.get("successful", 0)) + 1
+                    )
 
                 # 更新同步时间
                 subscription["last_sync"] = int(current_time.timestamp())
-                subscription["next_sync"] = int((current_time + self._get_sync_interval(
-                    subscription["schedule"]
-                )).timestamp())
+                subscription["next_sync"] = int(
+                    (
+                        current_time + self._get_sync_interval(subscription["schedule"])
+                    ).timestamp()
+                )
 
             except Exception as e:
                 sync_results["failed"] = int(sync_results.get("failed", 0)) + 1
-                if "errors" in sync_results and isinstance(sync_results["errors"], list):
+                if "errors" in sync_results and isinstance(
+                    sync_results["errors"], list
+                ):
                     sync_results["errors"].append(
                         {"subscription_id": subscription_id, "error": str(e)}
                     )

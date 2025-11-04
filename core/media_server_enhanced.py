@@ -473,7 +473,9 @@ class EnhancedMediaServerManager:
 
                 typed_params: Dict[str, Union[str, int]] = params  # type: ignore
                 response = await client.get(
-                    f"{server_config.url}/Items/Latest", headers=headers, params=typed_params
+                    f"{server_config.url}/Items/Latest",
+                    headers=headers,
+                    params=typed_params,
                 )
 
                 if response.status_code == 200:
