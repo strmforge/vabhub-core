@@ -3,7 +3,7 @@
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 from .file_organizer import FileOrganizer, OrganizationRule, FileAction, MediaType
@@ -27,13 +27,13 @@ def get_file_organizer():
 
 @router.post("/scan", response_model=List[Dict[str, Any]])
 async def scan_directory(
-    directory: str = None,
+    directory: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     organizer: FileOrganizer = Depends(get_file_organizer),
 ):
     """扫描目录获取文件信息"""
     try:
-        file_infos = organizer.scan_directory(directory)
+        file_infos = organizer.scan_directory(str(directory) if directory else None)
 
         result = []
         for file_info in file_infos:
@@ -56,7 +56,7 @@ async def scan_directory(
 
 @router.post("/preview", response_model=List[Dict[str, Any]])
 async def preview_organization(
-    directory: str = None,
+    directory: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     organizer: FileOrganizer = Depends(get_file_organizer),
 ):
@@ -73,7 +73,7 @@ async def preview_organization(
 
 @router.post("/organize", response_model=List[Dict[str, Any]])
 async def organize_files(
-    directory: str = None,
+    directory: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     organizer: FileOrganizer = Depends(get_file_organizer),
 ):
@@ -95,7 +95,7 @@ async def organize_single_file(
     """整理单个文件"""
     try:
         # 扫描文件信息
-        file_infos = organizer.scan_directory(Path(file_path).parent)
+        file_infos = organizer.scan_directory(str(Path(file_path).parent))
         target_file_info = None
 
         for file_info in file_infos:
@@ -256,7 +256,7 @@ async def get_template_variables():
 @router.post("/test-template", response_model=Dict[str, Any])
 async def test_template(
     template: str,
-    test_data: Dict[str, Any] = None,
+    test_data: Optional[Dict[str, Any]] = None,
     current_user: dict = Depends(get_current_user),
 ):
     """测试模板渲染"""
@@ -304,13 +304,13 @@ async def test_template(
 
 @router.get("/statistics", response_model=Dict[str, Any])
 async def get_statistics(
-    directory: str = None,
+    directory: Optional[str] = None,
     current_user: dict = Depends(get_current_user),
     organizer: FileOrganizer = Depends(get_file_organizer),
 ):
     """获取目录统计信息"""
     try:
-        file_infos = organizer.scan_directory(directory)
+        file_infos = organizer.scan_directory(str(directory) if directory else None)
 
         # 统计信息
         total_files = len(file_infos)

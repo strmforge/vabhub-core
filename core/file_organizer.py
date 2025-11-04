@@ -42,7 +42,7 @@ class FileInfo:
     size: int
     modified_time: float
     media_type: MediaType
-    metadata: Dict[str, Any] = None
+    metadata: Optional[Dict[str, Any]] = None
 
     def __post_init__(self):
         if self.metadata is None:
@@ -124,7 +124,7 @@ class FileOrganizer:
                 return True
         return False
 
-    def scan_directory(self, directory: str = None) -> List[FileInfo]:
+    def scan_directory(self, directory: Optional[str] = None) -> List[FileInfo]:
         """扫描目录获取文件信息"""
         scan_path = Path(directory) if directory else self.base_path
         file_infos = []
@@ -200,8 +200,8 @@ class FileOrganizer:
             r"S(\d{1,2})E(\d{1,2})", filename, re.IGNORECASE
         )
         if season_episode_match:
-            metadata["season"] = int(season_episode_match.group(1))
-            metadata["episode"] = int(season_episode_match.group(2))
+            metadata["season"] = str(int(season_episode_match.group(1)))
+            metadata["episode"] = str(int(season_episode_match.group(2)))
 
         # 提取分辨率
         resolution_match = re.search(
@@ -250,19 +250,20 @@ class FileOrganizer:
         return metadata
 
     def organize_file(
-        self, file_info: FileInfo, rule: OrganizationRule = None
+        self, file_info: FileInfo, rule: Optional[OrganizationRule] = None
     ) -> Dict[str, Any]:
         """整理单个文件"""
         try:
             # 如果没有指定规则，自动匹配规则
-            if not rule:
-                rule = self._find_matching_rule(file_info)
-                if not rule:
+            if rule is None:
+                matched_rule = self._find_matching_rule(file_info)
+                if matched_rule is None:
                     return {
                         "success": False,
                         "message": "No matching rule found",
                         "file": file_info.name,
                     }
+                rule = matched_rule
 
             # 生成目标路径
             target_path = self._generate_target_path(file_info, rule)
@@ -296,18 +297,19 @@ class FileOrganizer:
         ext = Path(file_info.path).suffix
 
         # 准备模板变量
-        template_vars = file_info.metadata.copy()
+        metadata = file_info.metadata or {}
+        template_vars = metadata.copy()
         template_vars.update(
             {
-                "title": file_info.metadata.get("title", "Unknown"),
-                "year": file_info.metadata.get("year", ""),
-                "season": file_info.metadata.get("season", 1),
-                "episode": file_info.metadata.get("episode", 1),
+                "title": metadata.get("title", "Unknown"),
+                "year": metadata.get("year", ""),
+                "season": metadata.get("season", 1),
+                "episode": metadata.get("episode", 1),
                 "ext": ext[1:] if ext else "",
-                "resolution": file_info.metadata.get("resolution", ""),
-                "codec": file_info.metadata.get("codec", ""),
-                "audio": file_info.metadata.get("audio", ""),
-                "release_group": file_info.metadata.get("release_group", ""),
+                "resolution": metadata.get("resolution", ""),
+                "codec": metadata.get("codec", ""),
+                "audio": metadata.get("audio", ""),
+                "release_group": metadata.get("release_group", ""),
             }
         )
 
@@ -354,7 +356,7 @@ class FileOrganizer:
             )
             return False
 
-    def batch_organize(self, directory: str = None) -> List[Dict[str, Any]]:
+    def batch_organize(self, directory: Optional[str] = None) -> List[Dict[str, Any]]:
         """批量整理目录中的文件"""
         file_infos = self.scan_directory(directory)
         results = []
@@ -365,7 +367,7 @@ class FileOrganizer:
 
         return results
 
-    def preview_organization(self, directory: str = None) -> List[Dict[str, Any]]:
+    def preview_organization(self, directory: Optional[str] = None) -> List[Dict[str, Any]]:
         """预览整理结果"""
         file_infos = self.scan_directory(directory)
         previews = []

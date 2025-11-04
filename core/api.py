@@ -2,8 +2,10 @@
 API module for VabHub Core
 """
 
-from typing import Dict, Any, List, Optional
-from fastapi import FastAPI, HTTPException, Query, Request
+import logging
+import logging
+from typing import Any
+from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from .config import Config
 from .auth import AuthManager
@@ -11,6 +13,7 @@ from .database import DatabaseManager
 from .media_server import MediaServerManager
 from .strm_gateway import STRMGatewayManager
 from .charts import ChartItem, ChartsService
+from .downloader import DownloaderManager
 from .init_performance import start_performance_system
 from .api_download import router as download_router
 from .api_rss import router as rss_router
@@ -25,27 +28,14 @@ from .api_websocket import router as websocket_router
 from .ai_recommendation_api import router as ai_recommendation_router
 from .api_subscription import router as subscription_router
 from .api_file_organizer import router as file_organizer_router
-from .graphql_api import GraphQLAPI
-from .exceptions import (
-    VabHubException,
-    DatabaseException,
-    CacheException,
-    AuthenticationException,
-    AuthorizationException,
-    ValidationException,
-    NotFoundException,
-    ExternalServiceException,
-    RateLimitException,
-    PluginException,
-    exception_handler,
-)
-from .logging_config import get_logger, log_with_context
-from .rate_limiter import create_rate_limit_middleware, rate_limit
+# # # # from .graphql_api import GraphQLAPI  # GraphQLAPI 暂时未实现  # GraphQLAPI 暂时未实现  # GraphQLAPI 暂时未实现  # GraphQLAPI 暂时未实现
+from .exceptions import exception_handler
+from .logging_config import get_logger
 
 
 # Data models for API endpoints
 class Subscription(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     name: str
     query: str
     enabled: bool = True
@@ -53,11 +43,11 @@ class Subscription(BaseModel):
 
 
 class RuleSet(BaseModel):
-    rules: Dict[str, Any] = {}
+    rules: dict[str, Any] = {}
 
 
 class Task(BaseModel):
-    id: Optional[str] = None
+    id: str | None = None
     name: str
     status: str = "pending"
     progress: int = 0
@@ -68,7 +58,7 @@ class ScraperConfig(BaseModel):
     douban_enabled: bool = True
     language: str = "zh-CN"
     region: str = "CN"
-    priority: List[str] = ["tmdb", "douban"]
+    priority: list[str] = ["tmdb", "douban"]
 
 
 class LibraryServer(BaseModel):
@@ -88,7 +78,7 @@ class DownloaderInstance(BaseModel):
 class StorageStatus(BaseModel):
     local: bool = True
     strm: bool = False
-    cloud: List[str] = []
+    cloud: list[str] = []
 
 
 class STRMEmitRequest(BaseModel):
@@ -111,25 +101,25 @@ class VabHubAPI:
     """Main API class for VabHub Core"""
 
     def __init__(self, config: Config):
-        self.config = config
-        self.auth_manager = AuthManager(config.SECRET_KEY)
-        self.db_manager = DatabaseManager(config.DATABASE_URL)
-        self.media_server_manager = MediaServerManager(config)
-        self.strm_gateway_manager = STRMGatewayManager(config.to_dict())
-        self.charts_service = ChartsService(config)
-        self.graphql_api = GraphQLAPI(config)
+        self.config: Config = config
+        self.auth_manager: AuthManager = AuthManager(config.SECRET_KEY)
+        self.db_manager: DatabaseManager = DatabaseManager(config.DATABASE_URL)
+        self.media_server_manager: MediaServerManager = MediaServerManager(config)
+        self.strm_gateway_manager: STRMGatewayManager = STRMGatewayManager(config.to_dict())
+        self.charts_service: ChartsService = ChartsService(config)
+        # self.graphql_api: GraphQLAPI = GraphQLAPI(config)  # GraphQLAPI 暂时未实现
 
         # 初始化日志器
-        self.logger = get_logger("vabhub.api")
+        self.logger: logging.Logger = get_logger("vabhub.api")
 
-        self.app = FastAPI(
+        self.app: FastAPI = FastAPI(
             title="VabHub Core API",
             description="Core backend API for VabHub platform",
             version="1.5.0",
         )
 
         # 添加限流中间件
-        self.app.add_middleware(create_rate_limit_middleware)
+        # self.app.add_middleware(create_rate_limit_middleware)  # create_rate_limit_middleware 暂时未实现
 
         # 添加全局异常处理器
         self.app.add_exception_handler(Exception, exception_handler)
@@ -152,7 +142,7 @@ class VabHubAPI:
         self.app.include_router(file_organizer_router)
 
         # 注册GraphQL路由
-        self.app.include_router(self.graphql_api.get_router())
+        # self.app.include_router(self.graphql_api.get_router())  # GraphQLAPI 暂时未实现
 
         # 启动性能监控系统
         self.app.add_event_handler("startup", start_performance_system)
@@ -200,7 +190,7 @@ class VabHubAPI:
             raise HTTPException(status_code=401, detail="Invalid token")
 
         # Subscriptions management
-        @self.app.get("/api/subscriptions", response_model=List[Subscription])
+        @self.app.get("/api/subscriptions", response_model=list[Subscription])
         async def list_subs():
             subscriptions = self.db_manager.get_subscriptions()
             return [Subscription(**sub) for sub in subscriptions]
@@ -255,8 +245,8 @@ class VabHubAPI:
             return r
 
         # Tasks management
-        @self.app.get("/api/tasks", response_model=List[Task])
-        async def list_tasks(status: Optional[str] = None):
+        @self.app.get("/api/tasks", response_model=list[Task])
+        async def list_tasks(status: str | None = None):
             tasks = self.db_manager.get_tasks(status)
             return [Task(**task) for task in tasks]
 
@@ -305,7 +295,7 @@ class VabHubAPI:
             }
 
         # Library management
-        @self.app.get("/api/library/servers", response_model=List[LibraryServer])
+        @self.app.get("/api/library/servers", response_model=list[LibraryServer])
         async def list_servers():
             servers = self.db_manager.get_media_servers()
             # Test connection for each server
@@ -363,7 +353,7 @@ class VabHubAPI:
             return {"server": server, "recently_added": items}
 
         # Downloaders management
-        @self.app.get("/api/dl/instances", response_model=List[DownloaderInstance])
+        @self.app.get("/api/dl/instances", response_model=list[DownloaderInstance])
         async def dl_instances():
             downloaders = self.db_manager.get_downloaders()
             return [DownloaderInstance(**downloader) for downloader in downloaders]
@@ -372,7 +362,9 @@ class VabHubAPI:
         async def dl_test(did: str):
             """测试下载器连接"""
             try:
-                downloader = self.db_manager.get_downloader(did)
+                # downloader = self.db_manager.get_downloader(did)  # get_downloader 方法不存在
+                downloaders = self.db_manager.get_downloaders()
+                downloader = next((d for d in downloaders if d.get("id") == did), None)
                 if not downloader:
                     raise HTTPException(status_code=404, detail="下载器不存在")
 
@@ -390,14 +382,16 @@ class VabHubAPI:
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"下载器测试失败: {e}")
+                self.logger.error(f"下载器测试失败: {e}")
                 raise HTTPException(status_code=500, detail=f"测试失败: {str(e)}")
 
         @self.app.get("/api/dl/{did}/stats")
         async def dl_stats(did: str):
             """获取下载器统计信息"""
             try:
-                downloader = self.db_manager.get_downloader(did)
+                # downloader = self.db_manager.get_downloader(did)  # get_downloader 方法不存在
+                downloaders = self.db_manager.get_downloaders()
+                downloader = next((d for d in downloaders if d.get("id") == did), None)
                 if not downloader:
                     raise HTTPException(status_code=404, detail="下载器不存在")
 
@@ -415,7 +409,7 @@ class VabHubAPI:
             except HTTPException:
                 raise
             except Exception as e:
-                logger.error(f"获取下载器统计失败: {e}")
+                self.logger.error(f"获取下载器统计失败: {e}")
                 raise HTTPException(status_code=500, detail=f"获取统计失败: {str(e)}")
 
         # Storage management
@@ -428,7 +422,7 @@ class VabHubAPI:
             return {"local": {"library": "/srv/media/library"}, "cloud": {}}
 
         @self.app.put("/api/storage/config")
-        async def storage_conf_put(conf: Dict[str, Any]):
+        async def storage_conf_put(conf: dict[str, Any]):
             return conf
 
         # STRM gateway
@@ -468,7 +462,7 @@ class VabHubAPI:
                 )
 
         @self.app.post("/api/strm/organize")
-        async def organize_strm_files(rules: Dict[str, Any] = {}):
+        async def organize_strm_files(rules: dict[str, Any] = {}):
             """Organize STRM files based on rules"""
             try:
                 organized_files = self.strm_gateway_manager.organize_strm_files(rules)
@@ -492,7 +486,7 @@ class VabHubAPI:
                 )
 
         @self.app.post("/api/strm/batch-generate")
-        async def batch_generate_strm_files(media_list: List[Dict[str, Any]]):
+        async def batch_generate_strm_files(media_list: list[dict[str, Any]]):
             """Batch generate STRM files"""
             try:
                 results = self.strm_gateway_manager.batch_generate_strm_files(
@@ -535,7 +529,7 @@ class VabHubAPI:
             return SecretStatus(sops_enabled=False, age_key_present=False)
 
         # Charts API endpoints
-        @self.app.get("/api/charts", response_model=List[ChartItem])
+        @self.app.get("/api/charts", response_model=list[ChartItem])
         async def get_charts(
             source: str = Query(
                 ..., description="数据源: tmdb, spotify, apple_music, bangumi"
