@@ -6,7 +6,7 @@ VabHub 统一异常处理模块
 
 import logging
 import traceback
-from typing import Any, Dict, Optional, Type
+from typing import Any, Dict, Optional, Type, Callable, Callable, Callable, Callable
 from fastapi import HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -290,7 +290,7 @@ def error_handler(func):
 
 
 def safe_execute(
-    func: callable,
+    func: Callable,
     default_return: Any = None,
     exception_types: Optional[list] = None,
     log_error: bool = True,

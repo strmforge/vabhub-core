@@ -7,7 +7,7 @@ import re
 import shutil
 import logging
 from pathlib import Path
-from typing import Any, Optional, List, Dict
+from typing import Any, Optional, List, Dict, Tuple, Tuple
 
 
 class PathManager:
@@ -285,7 +285,7 @@ class PathManager:
 
         return filename
 
-    def find_duplicates(self, directory: str) -> List[tuple[str, str]]:
+    def find_duplicates(self, directory: str) -> List[Tuple[str, str]]:
         """
         查找重复文件
 

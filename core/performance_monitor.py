@@ -10,7 +10,7 @@ import psutil
 import logging
 from dataclasses import dataclass
 from collections import deque, defaultdict
-from typing import Any, Optional, Union, Dict, List, List
+from typing import Any, Optional, Union, Dict, List
 from enum import Enum
 
 
@@ -64,10 +64,10 @@ class PerformanceMonitor:
 
     def __init__(self, history_size: int = 1000):
         self.history_size: int = history_size
-        self.metrics_history: dict[MetricType, deque[PerformanceMetric]] = defaultdict(
+        self.metrics_history: Dict[MetricType, deque[PerformanceMetric]] = defaultdict(
             lambda: deque(maxlen=history_size)
         )
-        self.stats: dict[MetricType, PerformanceStats] = {}
+        self.stats: Dict[MetricType, PerformanceStats] = {}
         self.logger: logging.Logger = logging.getLogger(__name__)
 
         # 初始化统计信息
@@ -161,11 +161,11 @@ class PerformanceMonitor:
         """获取性能统计信息"""
         return self.stats[metric_type]
 
-    async def get_all_stats(self) -> dict[MetricType, PerformanceStats]:
+    async def get_all_stats(self) -> Dict[MetricType, PerformanceStats]:
         """获取所有性能统计信息"""
         return self.stats.copy()
 
-    async def analyze_performance(self) -> dict[str, Any]:
+    async def analyze_performance(self) -> Dict[str, Any]:
         """性能分析"""
         analysis: dict[str, Any] = {
             "recommendations": [],
