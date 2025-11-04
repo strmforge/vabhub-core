@@ -5,8 +5,8 @@
 """
 
 import time
-from fastapi import APIRouter, HTTPException
-from typing import Dict, Any, List
+from fastapi import APIRouter, HTTPException, Query
+from typing import Dict, Any, List, Optional
 from pydantic import BaseModel
 
 from .performance_monitor import performance_monitor, MetricType
@@ -111,7 +111,7 @@ async def get_cache_stats():
 
 
 @router.post("/cache/clear")
-async def clear_cache(level: str = None):
+async def clear_cache(level: Optional[str] = Query(None)):
     """清空缓存"""
     try:
         cache_level = None

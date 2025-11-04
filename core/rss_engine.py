@@ -6,6 +6,8 @@ RSS引擎模块 - 基于MoviePilot参考实现
 import asyncio
 import hashlib
 from .logging_config import get_logger
+
+logger = get_logger(__name__)
 import re
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -146,7 +148,7 @@ class DefaultRSSParser(RSSParser):
             async with aiohttp.ClientSession() as session:
                 async with session.get(feed_url) as response:
                     if response.status != 200:
-                        logging.error(f"RSS feed fetch failed: {response.status}")
+                        logger.error(f"RSS feed fetch failed: {response.status}")
                         return []
 
                     content = await response.text()
@@ -185,7 +187,7 @@ class DefaultRSSParser(RSSParser):
                     return items
 
         except Exception as e:
-            logging.error(f"RSS parsing error: {e}")
+            logger.error(f"RSS parsing error: {e}")
             return []
 
     def parse_item_info(self, item: RSSItem) -> RSSItem:
@@ -300,12 +302,12 @@ class RSSManager:
     async def fetch_feed(self, name: str, url: str) -> List[RSSItem]:
         """抓取单个RSS源"""
         try:
-            logging.info(f"Fetching RSS feed: {name}")
+            logger.info(f"Fetching RSS feed: {name}")
             items = await self.parser.parse_feed(url)
-            logging.info(f"Fetched {len(items)} items from {name}")
+            logger.info(f"Fetched {len(items)} items from {name}")
             return items
         except Exception as e:
-            logging.error(f"Failed to fetch RSS feed {name}: {e}")
+            logger.error(f"Failed to fetch RSS feed {name}: {e}")
             return []
 
 

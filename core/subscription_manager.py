@@ -40,7 +40,7 @@ class SubscriptionRule:
 
     name: str
     keywords: List[str]
-    exclude_keywords: List[str] = None
+    exclude_keywords: Optional[List[str]] = None,
     quality: str = "1080p"
     media_type: MediaType = MediaType.MOVIE
     enabled: bool = True
@@ -62,8 +62,8 @@ class Subscription:
     last_check: Optional[datetime] = None
     next_check: Optional[datetime] = None
     check_interval: int = 3600  # 默认1小时
-    created_at: datetime = None
-    updated_at: datetime = None
+    created_at: Optional[datetime] = None,
+    updated_at: Optional[datetime] = None
 
     def __post_init__(self):
         if self.created_at is None:
@@ -210,7 +210,11 @@ class SubscriptionManager:
                 "tags": ["auto", "subscription"],
             }
 
-            await self.download_manager.add_download(download_info)
+            await self.download_manager.add_torrent(
+                torrent=download_info['url'],
+                category=download_info['category'],
+                tags=download_info['tags']
+            )
             logger.info(f"Triggered download for: {item['title']}")
 
         except Exception as e:

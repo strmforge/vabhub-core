@@ -169,7 +169,7 @@ class TMDBProvider(MetadataProvider):
         return self.session
 
     async def _request(
-        self, endpoint: str, params: Dict[str, Any] = None
+        self, endpoint: str, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """发送API请求"""
         if params is None:
@@ -201,8 +201,9 @@ class TMDBProvider(MetadataProvider):
         data = await self._request(endpoint, params)
         results = data.get("results", [])
 
-        entities = []
+        entities: List[MediaEntity] = []
         for item in results:
+            entity: Optional[MediaEntity] = None
             if media_type == MediaType.MOVIE:
                 entity = self._parse_movie(item)
             elif media_type == MediaType.TV_SHOW:
@@ -471,6 +472,7 @@ class MetadataManager:
         for provider_name in self.priority:
             if provider_name in self.providers:
                 try:
+                    result: Optional[MediaEntity] = None
                     if media_type == MediaType.MOVIE:
                         result = await self.providers[provider_name].get_movie(
                             media_id, language

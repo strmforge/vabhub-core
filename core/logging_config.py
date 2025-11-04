@@ -91,8 +91,8 @@ def setup_logging(
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # 配置日志处理器
-    handlers = []
+    # 配置日志处理器，使用更通用的类型
+    handlers: List[logging.Handler] = []
 
     if enable_console:
         console_handler = logging.StreamHandler(sys.stdout)

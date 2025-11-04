@@ -113,4 +113,6 @@ def init_cache_manager(redis_url: str, default_ttl: int = 3600):
 
 def get_cache_manager() -> Optional[RedisCacheManager]:
     """获取全局缓存管理器"""
+    if cache_manager is None:
+        print("警告: 缓存管理器尚未初始化，请先调用init_cache_manager")
     return cache_manager

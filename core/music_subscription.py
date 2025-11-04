@@ -84,6 +84,11 @@ class MusicSubscriptionManager:
         Returns:
             搜索结果列表
         """
+        # 确保stats字典中有total_searches键且不为None
+        if "total_searches" not in self.stats:
+            self.stats["total_searches"] = 0
+        elif self.stats["total_searches"] is None:
+            self.stats["total_searches"] = 0
         self.stats["total_searches"] += 1
 
         try:
@@ -98,12 +103,12 @@ class MusicSubscriptionManager:
                 results = await asyncio.gather(*tasks, return_exceptions=True)
 
                 # 合并结果
-                merged_results = []
+                merged_results: List[Dict[str, Any]] = []
                 for result in results:
                     if isinstance(result, Exception):
                         logger.warning(f"平台搜索失败: {result}")
                         continue
-                    if result:
+                    if result and isinstance(result, list):
                         merged_results.extend(result)
 
                 # 去重和排序
@@ -152,7 +157,7 @@ class MusicSubscriptionManager:
                 "enabled": True,
                 "created_at": datetime.now(),
                 "last_sync": None,
-                "next_sync": datetime.now() + timedelta(hours=24),
+                "next_sync": datetime.now() + timedelta(hours=24) if subscription_data.get("schedule", "daily") == "daily" else datetime.now() + timedelta(days=7)
             }
 
             self.subscriptions[subscription_id] = subscription
@@ -195,11 +200,11 @@ class MusicSubscriptionManager:
                 # 执行订阅同步
                 new_content = await self._sync_single_subscription(subscription)
 
-                if new_content:
+                if new_content and isinstance(new_content, list):
                     sync_results["new_content"].extend(new_content)
-                    sync_results["successful"] += 1
+                    sync_results["successful"] = sync_results.get("successful", 0) + 1
                 else:
-                    sync_results["successful"] += 1
+                    sync_results["successful"] = sync_results.get("successful", 0) + 1
 
                 # 更新同步时间
                 subscription["last_sync"] = current_time
@@ -208,7 +213,7 @@ class MusicSubscriptionManager:
                 )
 
             except Exception as e:
-                sync_results["failed"] += 1
+                sync_results["failed"] = sync_results.get("failed", 0) + 1
                 sync_results["errors"].append(
                     {"subscription_id": subscription_id, "error": str(e)}
                 )

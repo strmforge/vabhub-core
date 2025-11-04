@@ -4,7 +4,19 @@ Logging integration for real-time log broadcasting
 
 import logging
 import asyncio
-from .websocket_manager import log_broadcaster, LogLevel
+from .websocket_manager import ConnectionManager, LogBroadcaster
+
+# 创建全局实例
+connection_manager = ConnectionManager()
+log_broadcaster = LogBroadcaster(connection_manager)
+
+# 定义LogLevel枚举
+class LogLevel:
+    DEBUG = "debug"
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    CRITICAL = "critical"
 
 
 class WebSocketLogHandler(logging.Handler):
@@ -66,14 +78,14 @@ def setup_realtime_logging():
 # Utility functions for manual log broadcasting
 async def log_system_event(message: str):
     """Log a system event"""
-    await log_broadcaster.broadcast_system_log(message)
+    await log_broadcaster.broadcast_log(LogLevel.INFO, "system", message)
 
 
 async def log_download_event(message: str):
     """Log a download event"""
-    await log_broadcaster.broadcast_download_log(message)
+    await log_broadcaster.broadcast_log(LogLevel.INFO, "download", message)
 
 
 async def log_plugin_event(message: str, plugin_name: str):
     """Log a plugin event"""
-    await log_broadcaster.broadcast_plugin_log(message, plugin_name)
+    await log_broadcaster.broadcast_log(LogLevel.INFO, plugin_name, message)

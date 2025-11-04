@@ -3,7 +3,7 @@
 """
 
 from fastapi import APIRouter, HTTPException, Depends
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from .renamer import FileRenamer, STRMGenerator, MediaOrganizer, RenameTemplate
 from .auth import get_current_user
@@ -25,7 +25,7 @@ async def parse_filename(filename: str, current_user: dict = Depends(get_current
 @router.post("/generate-filename")
 async def generate_filename(
     filename: str,
-    media_info: Dict[str, Any] = None,
+    media_info: Dict[str, Any] = {},  # 使用空字典替代None作为默认值
     template: str = "{title}.{year}.{SxxExx}.{codec}.{audio}",
     current_user: dict = Depends(get_current_user),
 ):
@@ -103,7 +103,7 @@ async def generate_strm_file(
 async def organize_media_file(
     file_path: str,
     media_info: Dict[str, Any],
-    url: str = None,
+    url: Optional[str] = None,  # 添加Optional类型注解
     generate_strm: bool = False,
     base_path: str = ".",
     template: str = "{title}.{year}.{SxxExx}.{codec}.{audio}",
@@ -125,7 +125,7 @@ async def organize_media_file(
 @router.post("/scan-organize")
 async def scan_and_organize(
     source_dir: str,
-    target_dir: str = None,
+    target_dir: Optional[str] = None,  # 添加Optional类型注解
     template: str = "{title}.{year}.{SxxExx}.{codec}.{audio}",
     current_user: dict = Depends(get_current_user),
 ):

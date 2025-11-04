@@ -57,6 +57,7 @@ class FileRenamer:
         self.template = RenameTemplate(
             template or "{title}.{year}.{SxxExx}.{codec}.{audio}"
         )
+        self.logger = logging.getLogger(__name__)
 
         # 支持的媒体文件扩展名
         self.video_extensions = {
@@ -373,6 +374,7 @@ class MediaOrganizer:
     def __init__(self, base_path: str, template: Optional[str] = None):
         self.renamer = FileRenamer(base_path, template)
         self.strm_generator = STRMGenerator(base_path)
+        self.logger = logging.getLogger(__name__)
 
     def organize_media_file(
         self,

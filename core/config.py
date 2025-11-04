@@ -67,3 +67,21 @@ class ProductionConfig(Config):
 
     DEBUG = False
     LOG_LEVEL = "WARNING"
+
+
+def get_config_by_env(env: str = None) -> Config:
+    """根据环境变量获取配置类
+    
+    Args:
+        env: 环境名称，如'dev'、'prod'等
+        
+    Returns:
+        对应的配置类实例
+    """
+    if env is None:
+        env = os.getenv("VABHUB_ENV", "dev")
+    
+    if env.lower() in ["prod", "production"]:
+        return ProductionConfig()
+    else:
+        return DevelopmentConfig()

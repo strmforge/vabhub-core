@@ -51,7 +51,7 @@ class SubscriptionManager:
         self,
         subscription_id: str,
         websocket: WebSocket,
-        metadata: Dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """注册新的订阅连接"""
         async with self.lock:
@@ -275,7 +275,7 @@ class GraphQLWebSocketManager:
         self.lock = asyncio.Lock()
 
     async def connect(
-        self, websocket: WebSocket, connection_params: Dict[str, Any] = None
+        self, websocket: WebSocket, connection_params: Optional[Dict[str, Any]] = None
     ):
         """建立WebSocket连接"""
         connection_id = str(uuid.uuid4())
@@ -332,20 +332,17 @@ class GraphQLWebSocketManager:
         }
 
 
+# 为了向后兼容，添加WebSocketManager作为GraphQLWebSocketManager的别名
+WebSocketManager = GraphQLWebSocketManager
+
+
 # 创建GraphQL路由器
 class VabHubGraphQLRouter(GraphQLRouter):
     """VabHub定制的GraphQL路由器"""
 
     def __init__(self, schema, **kwargs):
         super().__init__(schema, **kwargs)
-
-        # 添加自定义中间件
-        self.add_middleware(
-            CORSMiddleware,
-            allow_origins=["*"],
-            allow_methods=["*"],
-            allow_headers=["*"],
-        )
+        # 移除对不存在的add_middleware方法的调用
 
     async def websocket_endpoint(self, websocket: WebSocket):
         """WebSocket端点处理"""
@@ -475,10 +472,11 @@ class VabHubGraphQLApp:
 
 
 # 创建GraphQL应用实例
-def create_graphql_app(config: Config = None) -> VabHubGraphQLApp:
+def create_graphql_app(config: Optional[Config] = None) -> VabHubGraphQLApp:
     """创建GraphQL应用实例"""
     if config is None:
-        config = get_config_by_env()
+        from .config import get_config
+        config = get_config()
 
     return VabHubGraphQLApp(config)
 

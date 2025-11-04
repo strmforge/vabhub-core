@@ -7,10 +7,22 @@ VabHub 统一异常处理模块
 import logging
 import traceback
 from typing import Dict, Any, Optional, Callable
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from starlette.exceptions import HTTPException as StarletteHTTPException
+
+# Optional imports for fastapi and starlette
+try:
+    from fastapi import FastAPI, Request, HTTPException, RequestValidationError
+    from fastapi.responses import JSONResponse
+except ImportError:
+    FastAPI = None
+    Request = None
+    HTTPException = None
+    RequestValidationError = None
+    JSONResponse = None
+
+try:
+    from starlette import HTTPException as StarletteHTTPException
+except ImportError:
+    StarletteHTTPException = None
 
 
 class VabHubError(Exception):

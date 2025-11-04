@@ -7,7 +7,7 @@ import abc
 import asyncio
 import logging
 import time
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 
 from .config import Config
 from .cache_manager import CacheManager
@@ -78,7 +78,7 @@ class Throttler:
     def __init__(self, max_calls: int, period: float):
         self.max_calls = max_calls
         self.period = period
-        self.calls = []
+        self.calls: List[float] = []
 
     async def acquire(self):
         """获取调用许可"""
@@ -181,7 +181,7 @@ class MusicPlatformAdapter(abc.ABC):
         self, artist_id: str, limit: int = 50
     ) -> List[Dict[str, Any]]:
         """获取艺术家的热门歌曲"""
-        pass
+        raise NotImplementedError("子类必须实现get_artist_tracks方法")
 
     async def get_album_tracks(self, album_id: str) -> List[Dict[str, Any]]:
         """获取专辑中的歌曲"""
@@ -240,7 +240,7 @@ class MusicPlatformAdapter(abc.ABC):
             self.logger.warning(f"缓存写入失败: {e}")
             return False
 
-    def get_cache_stats(self) -> Dict[str, int]:
+    def get_cache_stats(self) -> Dict[str, Union[int, float]]:
         """获取缓存统计信息"""
         return {
             "cache_hits": self._cache_hits,

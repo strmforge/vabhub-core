@@ -6,13 +6,13 @@ AI驱动内容推荐系统 - 修复版本
 
 import logging
 from typing import List, Dict, Any, Optional, Callable
-import numpy as np
-from sentence_transformers import SentenceTransformer
+import numpy as np  # type: ignore
+from sentence_transformers import SentenceTransformer  # type: ignore
 import json
 import time
 from datetime import datetime
-from sklearn.metrics.pairwise import cosine_similarity
-import faiss  # 高性能相似度搜索
+from sklearn.metrics.pairwise import cosine_similarity  # type: ignore
+import faiss  # type: ignore  # 高性能相似度搜索
 
 from collections import defaultdict
 from threading import Lock
@@ -166,7 +166,8 @@ class AIRecommendationSystem:
                             metadata_json,
                         ),
                     )
-                    self.conn.commit()
+                    if self.conn is not None:
+                        self.conn.commit()
 
                 # 更新内存缓存
                 if user_id not in self.user_interactions:
@@ -252,7 +253,9 @@ class AIRecommendationSystem:
             # 2. 基于内容相似度
             # 3. 基于协同过滤
 
-            return personalized_results[:k]
+            # 确保k是整数
+            k_int = int(k) if k is not None else 0
+            return personalized_results[:k_int]
 
         except Exception as e:
             logger.error(f"获取个性化推荐失败: {e}")

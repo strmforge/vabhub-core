@@ -3,7 +3,7 @@
 """
 
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 from .notification_manager import (
     NotificationManager,
@@ -19,7 +19,7 @@ from .auth import get_current_user
 router = APIRouter(prefix="/notification", tags=["Notification"])
 
 # 全局通知管理器
-notification_manager: NotificationManager = None
+notification_manager: Optional[NotificationManager] = None
 
 
 def get_notification_manager() -> NotificationManager:
@@ -54,8 +54,8 @@ async def shutdown_event():
 async def send_notification(
     title: str,
     message: str,
-    notification_type: str = NotificationPriority.NORMAL,
-    metadata: Dict[str, Any] = None,
+    notification_type: str = NotificationPriority.NORMAL.value,
+    metadata: Optional[Dict[str, Any]] = None,
     current_user: dict = Depends(get_current_user),
 ):
     """发送通知"""
@@ -88,7 +88,7 @@ async def send_notification(
 async def send_success(
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
     current_user: dict = Depends(get_current_user),
 ):
     """发送成功通知"""
@@ -115,7 +115,7 @@ async def send_success(
 async def send_error(
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
     current_user: dict = Depends(get_current_user),
 ):
     """发送错误通知"""
@@ -142,7 +142,7 @@ async def send_error(
 async def send_warning(
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
     current_user: dict = Depends(get_current_user),
 ):
     """发送警告通知"""
@@ -169,7 +169,7 @@ async def send_warning(
 async def send_info(
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
     current_user: dict = Depends(get_current_user),
 ):
     """发送信息通知"""

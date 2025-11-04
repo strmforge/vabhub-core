@@ -94,7 +94,7 @@ class MemoryCacheBackend(CacheBackend):
         self._creation_times: Dict[str, float] = {}
 
         if policy == CachePolicy.LRU:
-            self._order = OrderedDict()
+            self._order: OrderedDict[str, float] = OrderedDict()
 
     async def get(self, key: str) -> Optional[Any]:
         if key not in self._cache:
@@ -208,7 +208,7 @@ class RedisCacheBackend(CacheBackend):
             raise ImportError("redis package is required for RedisCacheBackend")
 
         # 创建连接池
-        self.redis_pool = redis.ConnectionPool.from_url(
+        self.redis_pool: redis.ConnectionPool = redis.ConnectionPool.from_url(
             redis_url,
             max_connections=max_connections,
             health_check_interval=health_check_interval,
@@ -359,10 +359,9 @@ class RedisCacheBackend(CacheBackend):
 
             # 检查连接池状态
             pool_info = {
-                "connections": self.redis_pool._in_use_connections
-                + self.redis_pool._available_connections,
-                "in_use": self.redis_pool._in_use_connections,
-                "available": self.redis_pool._available_connections,
+                "status": "connected",
+                "max_connections": max_connections,
+                # 不再直接访问内部属性
             }
 
             return {

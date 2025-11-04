@@ -32,8 +32,8 @@ class AIRecommendationSystem:
         """
         self.model_name = model_name
         self.model = None
-        self.media_items = []
-        self.embeddings = []
+        self.media_items: List[Dict[str, Any]] = []
+        self.embeddings: List[np.ndarray] = []
         self.is_initialized = False
 
         # 推荐配置
@@ -50,16 +50,16 @@ class AIRecommendationSystem:
 
         # 性能优化相关
         self.faiss_index = None
-        self.embedding_cache = {}
-        self.query_cache = {}
-        self.media_cache = {}
+        self.embedding_cache: Dict[str, np.ndarray] = {}
+        self.query_cache: Dict[str, List[Dict[str, Any]]] = {}
+        self.media_cache: Dict[str, Dict[str, Any]] = {}
         self.cache_lock = Lock()
         self.last_cache_cleanup = time.time()
 
         # 个性化推荐相关
-        self.user_profiles = defaultdict(dict)
-        self.user_interactions = defaultdict(list)
-        self.user_preferences = defaultdict(dict)
+        self.user_profiles: Dict[str, Dict[str, Any]] = defaultdict(dict)
+        self.user_interactions: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        self.user_preferences: Dict[str, Dict[str, float]] = defaultdict(dict)
         self._init_user_database()
 
     def _init_user_database(self):
@@ -124,8 +124,8 @@ class AIRecommendationSystem:
         media_id: str,
         interaction_type: str,
         interaction_value: float = 1.0,
-        metadata: Dict[str, Any] = None,
-    ):
+        metadata: Optional[Dict[str, Any]] = None,
+    ): 
         """
         记录用户行为交互
 
@@ -306,7 +306,7 @@ class AIRecommendationSystem:
             logger.error(f"更新偏好权重失败: {e}")
 
     def get_personalized_recommendations(
-        self, user_id: str, query_text: str = None, top_k: Optional[int] = None
+        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -322,16 +322,33 @@ class AIRecommendationSystem:
         if not self.is_initialized or len(self.media_items) == 0:
             return []
 
-        top_k = top_k or self.config["top_k"]
+        # 确保top_k是整数
+        if top_k is None:
+            # 安全地获取并转换top_k值
+            config_value = self.config.get("top_k", 10)
+            if isinstance(config_value, int):
+                top_k = config_value
+            elif isinstance(config_value, str):
+                try:
+                    top_k = int(config_value)
+                except (ValueError, TypeError):
+                    top_k = 10
+            else:
+                top_k = 10
+        
+        # 确保top_k不是None并且是整数
+        if top_k is None:
+            top_k = 10
+        safe_top_k = int(top_k)
 
         try:
             # 获取基础推荐结果
             if query_text:
-                base_results = self.get_similar_items(query_text, top_k * 2)
+                base_results = self.get_similar_items(query_text, safe_top_k * 2)
             else:
                 # 如果没有查询文本，基于用户历史推荐
                 base_results = self._get_recommendations_from_history(
-                    user_id, top_k * 2
+                    user_id, safe_top_k * 2
                 )
 
             if not base_results:
@@ -406,7 +423,7 @@ class AIRecommendationSystem:
     ) -> List[Dict[str, Any]]:
         """应用个性化权重到推荐结果"""
         try:
-            personalized_results = []
+            personalized_results: List[Dict[str, Any]] = []
 
             for item in recommendations:
                 personalized_item = item.copy()
@@ -508,8 +525,8 @@ class AIRecommendationSystem:
         media_id: str,
         interaction_type: str,
         interaction_value: float = 1.0,
-        metadata: Dict[str, Any] = None,
-    ):
+        metadata: Optional[Dict[str, Any]] = None,
+    ): 
         """
         记录用户行为交互
 
@@ -690,7 +707,7 @@ class AIRecommendationSystem:
             logger.error(f"更新偏好权重失败: {e}")
 
     def get_personalized_recommendations(
-        self, user_id: str, query_text: str = None, top_k: Optional[int] = None
+        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -706,16 +723,33 @@ class AIRecommendationSystem:
         if not self.is_initialized or len(self.media_items) == 0:
             return []
 
-        top_k = top_k or self.config["top_k"]
+        # 确保top_k是整数
+        if top_k is None:
+            # 安全地获取并转换top_k值
+            config_value = self.config.get("top_k", 10)
+            if isinstance(config_value, int):
+                top_k = config_value
+            elif isinstance(config_value, str):
+                try:
+                    top_k = int(config_value)
+                except (ValueError, TypeError):
+                    top_k = 10
+            else:
+                top_k = 10
+        
+        # 确保top_k不是None并且是整数
+        if top_k is None:
+            top_k = 10
+        safe_top_k = int(top_k)
 
         try:
             # 获取基础推荐结果
             if query_text:
-                base_results = self.get_similar_items(query_text, top_k * 2)
+                base_results = self.get_similar_items(query_text, safe_top_k * 2)
             else:
                 # 如果没有查询文本，基于用户历史推荐
                 base_results = self._get_recommendations_from_history(
-                    user_id, top_k * 2
+                    user_id, safe_top_k * 2
                 )
 
             if not base_results:
@@ -790,7 +824,7 @@ class AIRecommendationSystem:
     ) -> List[Dict[str, Any]]:
         """应用个性化权重到推荐结果"""
         try:
-            personalized_results = []
+            personalized_results: List[Dict[str, Any]] = []
 
             for item in recommendations:
                 personalized_item = item.copy()
@@ -948,8 +982,8 @@ class AIRecommendationSystem:
         media_id: str,
         interaction_type: str,
         interaction_value: float = 1.0,
-        metadata: Dict[str, Any] = None,
-    ):
+        metadata: Optional[Dict[str, Any]] = None,
+    ): 
         """
         记录用户行为交互
 
@@ -1130,7 +1164,7 @@ class AIRecommendationSystem:
             logger.error(f"更新偏好权重失败: {e}")
 
     def get_personalized_recommendations(
-        self, user_id: str, query_text: str = None, top_k: Optional[int] = None
+        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -1146,16 +1180,28 @@ class AIRecommendationSystem:
         if not self.is_initialized or len(self.media_items) == 0:
             return []
 
-        top_k = top_k or self.config["top_k"]
+        # 确保top_k是整数
+        if top_k is None:
+            # 安全地获取并转换top_k值
+            config_value = self.config.get("top_k")
+            if isinstance(config_value, int):
+                top_k = config_value
+            elif isinstance(config_value, str):
+                try:
+                    top_k = int(config_value)
+                except (ValueError, TypeError):
+                    top_k = 10
+            else:
+                top_k = 10
 
         try:
             # 获取基础推荐结果
             if query_text:
-                base_results = self.get_similar_items(query_text, top_k * 2)
+                base_results = self.get_similar_items(query_text, int(top_k) * 2)
             else:
                 # 如果没有查询文本，基于用户历史推荐
                 base_results = self._get_recommendations_from_history(
-                    user_id, top_k * 2
+                    user_id, int(top_k) * 2
                 )
 
             if not base_results:
@@ -1230,7 +1276,7 @@ class AIRecommendationSystem:
     ) -> List[Dict[str, Any]]:
         """应用个性化权重到推荐结果"""
         try:
-            personalized_results = []
+            personalized_results: List[Dict[str, Any]] = []
 
             for item in recommendations:
                 personalized_item = item.copy()
@@ -1332,8 +1378,8 @@ class AIRecommendationSystem:
         media_id: str,
         interaction_type: str,
         interaction_value: float = 1.0,
-        metadata: Dict[str, Any] = None,
-    ):
+        metadata: Optional[Dict[str, Any]] = None,
+    ): 
         """
         记录用户行为交互
 
@@ -1514,7 +1560,7 @@ class AIRecommendationSystem:
             logger.error(f"更新偏好权重失败: {e}")
 
     def get_personalized_recommendations(
-        self, user_id: str, query_text: str = None, top_k: Optional[int] = None
+        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -1530,16 +1576,20 @@ class AIRecommendationSystem:
         if not self.is_initialized or len(self.media_items) == 0:
             return []
 
-        top_k = top_k or self.config["top_k"]
+        # 确保top_k是整数
+        if top_k is None:
+            top_k = int(self.config["top_k"]) if isinstance(self.config["top_k"], (int, str)) else 10
+        # 确保top_k不是None并且是整数
+        safe_top_k = int(top_k) if top_k is not None else 10
 
         try:
             # 获取基础推荐结果
             if query_text:
-                base_results = self.get_similar_items(query_text, top_k * 2)
+                base_results = self.get_similar_items(query_text, safe_top_k * 2)
             else:
                 # 如果没有查询文本，基于用户历史推荐
                 base_results = self._get_recommendations_from_history(
-                    user_id, top_k * 2
+                    user_id, safe_top_k * 2
                 )
 
             if not base_results:
@@ -1614,7 +1664,7 @@ class AIRecommendationSystem:
     ) -> List[Dict[str, Any]]:
         """应用个性化权重到推荐结果"""
         try:
-            personalized_results = []
+            personalized_results: List[Dict[str, Any]] = []
 
             for item in recommendations:
                 personalized_item = item.copy()
@@ -1771,12 +1821,20 @@ class AIRecommendationSystem:
                 return self.embedding_cache[cache_key]
 
         try:
+            if self.model is None:
+                return np.zeros(768)  # 返回一个默认嵌入向量
             embedding = self.model.encode([text], convert_to_numpy=True)[0]
 
             # 添加到缓存
             if self.config["enable_cache"]:
                 with self.cache_lock:
-                    if len(self.embedding_cache) >= self.config["cache_size"]:
+                    # 安全地获取缓存大小
+                    cache_size = self.config.get("cache_size", 1000)
+                    try:
+                        cache_size = int(cache_size)
+                    except (ValueError, TypeError):
+                        cache_size = 1000
+                    if len(self.embedding_cache) >= cache_size:
                         # 清理最旧的缓存项
                         oldest_key = next(iter(self.embedding_cache))
                         del self.embedding_cache[oldest_key]
@@ -1867,11 +1925,12 @@ class AIRecommendationSystem:
             if len(embeddings_batch) > 0:
                 embeddings_array = np.array(embeddings_batch).astype("float32")
 
-                if self.faiss_index.ntotal == 0:
-                    # 首次添加，需要训练索引
-                    self.faiss_index.train(embeddings_array)
+                if self.faiss_index is not None:
+                    if self.faiss_index.ntotal == 0:
+                        # 首次添加，需要训练索引
+                        self.faiss_index.train(embeddings_array)
 
-                self.faiss_index.add(embeddings_array)
+                    self.faiss_index.add(embeddings_array)
 
                 # 添加到本地存储
                 self.embeddings.extend(embeddings_batch)
@@ -1899,7 +1958,17 @@ class AIRecommendationSystem:
         if not self.is_initialized or len(self.media_items) == 0:
             return []
 
-        top_k = top_k or self.config["top_k"]
+        # 确保top_k是整数类型
+        if top_k is None:
+            try:
+                # 先将config值转换为字符串，再尝试转换为整数
+                config_value = self.config.get("top_k", 10)
+                if config_value is not None:
+                    top_k = int(str(config_value))
+                else:
+                    top_k = 10
+            except (ValueError, TypeError):
+                top_k = 10
 
         # 检查查询缓存
         cache_key = f"query_{hash(query_text)}_{top_k}"
@@ -1914,39 +1983,47 @@ class AIRecommendationSystem:
             query_embedding = query_embedding.astype("float32").reshape(1, -1)
 
             # 使用FAISS进行高效搜索
+            if self.faiss_index is None:
+                return []
             distances, indices = self.faiss_index.search(
                 query_embedding, top_k * 2
             )  # 搜索更多结果用于过滤
 
             # 构建结果
-            results = []
+            results: List[Dict[str, Any]] = []
             for i, (distance, idx) in enumerate(zip(distances[0], indices[0])):
                 if idx < len(self.media_items):  # 确保索引有效
                     similarity = float(distance)  # FAISS返回的是距离，需要转换为相似度
 
                     # 过滤低相似度结果
                     if (
-                        similarity >= self.config["similarity_threshold"]
-                        or len(results) < top_k
+                        similarity >= float(self.config["similarity_threshold"])
+                        or len(results) < (top_k or 0)
                     ):
                         media_item = self.media_items[idx].copy()
                         media_item["similarity_score"] = similarity
                         media_item["rank"] = len(results) + 1
                         media_item["confidence"] = (
                             "high"
-                            if similarity >= self.config["similarity_threshold"]
+                            if similarity >= float(self.config["similarity_threshold"])
                             else "low"
                         )
                         results.append(media_item)
 
                     # 达到所需数量时停止
-                    if len(results) >= top_k:
+                    if len(results) >= (top_k or 0):
                         break
 
             # 缓存结果
             if self.config["enable_cache"]:
                 with self.cache_lock:
-                    if len(self.query_cache) >= self.config["cache_size"]:
+                    # 安全地获取缓存大小
+                    cache_size = self.config.get("cache_size", 1000)
+                    try:
+                        cache_size = int(cache_size)
+                    except (ValueError, TypeError):
+                        cache_size = 1000
+                    if len(self.query_cache) >= cache_size:
                         # 清理最旧的缓存项
                         oldest_key = next(iter(self.query_cache))
                         del self.query_cache[oldest_key]
@@ -1959,8 +2036,9 @@ class AIRecommendationSystem:
 
         except Exception as e:
             logger.error(f"获取相似内容失败: {e}")
-            # 回退到传统方法
-            return self._fallback_similar_items(query_text, top_k)
+            # 回退到传统方法，确保top_k是整数
+            safe_top_k = int(top_k) if top_k is not None else 10
+            return self._fallback_similar_items(query_text, safe_top_k)
 
     def _fallback_similar_items(
         self, query_text: str, top_k: int

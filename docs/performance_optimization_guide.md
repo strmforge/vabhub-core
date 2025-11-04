@@ -396,7 +396,7 @@ async def expensive_operation():
 #### 7.1 容器优化
 ```dockerfile
 # 多阶段构建减少镜像大小
-FROM python:3.11-slim as builder
+FROM python:3.9-slim as builder
 
 # 安装构建依赖
 RUN apt-get update && apt-get install -y gcc
@@ -406,7 +406,7 @@ COPY requirements.txt .
 RUN pip install --user -r requirements.txt
 
 # 生产阶段
-FROM python:3.11-slim
+FROM python:3.9-slim
 
 # 从构建阶段复制已安装的包
 COPY --from=builder /root/.local /root/.local

@@ -94,11 +94,11 @@ class QBittorrentIntegration:
 
     async def add_torrent(
         self,
-        torrent_file: bytes = None,
-        torrent_url: str = None,
-        save_path: str = None,
-        category: str = None,
-        tags: List[str] = None,
+        torrent_file: Optional[bytes] = None,
+        torrent_url: Optional[str] = None,
+        save_path: Optional[str] = None,
+        category: Optional[str] = None,
+        tags: Optional[List[str]] = None,
         paused: bool = False,
     ) -> bool:
         """添加种子"""
@@ -127,6 +127,10 @@ class QBittorrentIntegration:
             if paused:
                 data.add_field("paused", "true")
 
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return False
+                
             async with self.session.post(
                 f"{self.base_url}/api/v2/torrents/add", data=data, cookies=self.cookies
             ) as response:
@@ -135,9 +139,13 @@ class QBittorrentIntegration:
             logger.error(f"添加种子失败: {str(e)}")
             return False
 
-    async def get_torrents(self, hashes: List[str] = None) -> List[TorrentInfo]:
+    async def get_torrents(self, hashes: Optional[List[str]] = None) -> List[TorrentInfo]:
         """获取种子列表"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return []
+            
             params = {}
             if hashes:
                 params["hashes"] = "|".join(hashes)
@@ -180,6 +188,10 @@ class QBittorrentIntegration:
     async def set_torrent_tags(self, hashes: List[str], tags: List[str]):
         """设置种子标签"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return False
+            
             data = {"hashes": "|".join(hashes), "tags": ",".join(tags)}
 
             async with self.session.post(
@@ -195,6 +207,10 @@ class QBittorrentIntegration:
     async def set_torrent_category(self, hashes: List[str], category: str):
         """设置种子分类"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return False
+            
             data = {"hashes": "|".join(hashes), "category": category}
 
             async with self.session.post(
@@ -210,6 +226,10 @@ class QBittorrentIntegration:
     async def set_upload_limit(self, hashes: List[str], limit: int):
         """设置上传限制"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return False
+            
             data = {"hashes": "|".join(hashes), "limit": limit}
 
             async with self.session.post(
@@ -225,6 +245,10 @@ class QBittorrentIntegration:
     async def set_download_limit(self, hashes: List[str], limit: int):
         """设置下载限制"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return False
+            
             data = {"hashes": "|".join(hashes), "limit": limit}
 
             async with self.session.post(
@@ -240,6 +264,10 @@ class QBittorrentIntegration:
     async def pause_torrents(self, hashes: List[str]):
         """暂停种子"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return False
+            
             data = {"hashes": "|".join(hashes)}
 
             async with self.session.post(
@@ -255,6 +283,10 @@ class QBittorrentIntegration:
     async def resume_torrents(self, hashes: List[str]):
         """恢复种子"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return False
+            
             data = {"hashes": "|".join(hashes)}
 
             async with self.session.post(
@@ -270,6 +302,10 @@ class QBittorrentIntegration:
     async def delete_torrents(self, hashes: List[str], delete_files: bool = False):
         """删除种子"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return False
+            
             data = {
                 "hashes": "|".join(hashes),
                 "deleteFiles": "true" if delete_files else "false",
@@ -288,6 +324,10 @@ class QBittorrentIntegration:
     async def get_categories(self) -> Dict[str, Any]:
         """获取分类列表"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return {}
+            
             async with self.session.get(
                 f"{self.base_url}/api/v2/torrents/categories", cookies=self.cookies
             ) as response:
@@ -303,6 +343,10 @@ class QBittorrentIntegration:
     async def get_tags(self) -> List[str]:
         """获取标签列表"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return []
+            
             async with self.session.get(
                 f"{self.base_url}/api/v2/torrents/tags", cookies=self.cookies
             ) as response:
@@ -319,6 +363,10 @@ class QBittorrentIntegration:
     async def create_category(self, name: str, save_path: str):
         """创建分类"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return False
+            
             data = {"category": name, "savePath": save_path}
 
             async with self.session.post(
@@ -334,6 +382,10 @@ class QBittorrentIntegration:
     async def get_transfer_info(self) -> Dict[str, Any]:
         """获取传输信息"""
         try:
+            if self.session is None:
+                logger.error("qBittorrent会话未初始化")
+                return {}
+            
             async with self.session.get(
                 f"{self.base_url}/api/v2/transfer/info", cookies=self.cookies
             ) as response:

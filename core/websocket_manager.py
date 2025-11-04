@@ -217,4 +217,4 @@ class WebSocketManager:
 
 
 # 全局WebSocket管理器实例
-websocket_manager = WebSocketManager()
+websocket_manager = ConnectionManager()

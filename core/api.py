@@ -3,7 +3,7 @@ API module for VabHub Core
 """
 
 import logging
-from typing import Any, Optional
+from typing import Optional, Any, Dict, List
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from .config import Config
@@ -43,7 +43,7 @@ class Subscription(BaseModel):
 
 
 class RuleSet(BaseModel):
-    rules: dict[str, Any] = {}
+    rules: Dict[str, Any] = {}
 
 
 class Task(BaseModel):
@@ -58,7 +58,7 @@ class ScraperConfig(BaseModel):
     douban_enabled: bool = True
     language: str = "zh-CN"
     region: str = "CN"
-    priority: list[str] = ["tmdb", "douban"]
+    priority: List[str] = ["tmdb", "douban"]
 
 
 class LibraryServer(BaseModel):
@@ -192,7 +192,7 @@ class VabHubAPI:
             raise HTTPException(status_code=401, detail="Invalid token")
 
         # Subscriptions management
-        @self.app.get("/api/subscriptions", response_model=list[Subscription])
+        @self.app.get("/api/subscriptions", response_model=List[Subscription])
         async def list_subs():
             subscriptions = self.db_manager.get_subscriptions()
             return [Subscription(**sub) for sub in subscriptions]
@@ -247,7 +247,7 @@ class VabHubAPI:
             return r
 
         # Tasks management
-        @self.app.get("/api/tasks", response_model=list[Task])
+        @self.app.get("/api/tasks", response_model=List[Task])
         async def list_tasks(status: Optional[str] = None):
             tasks = self.db_manager.get_tasks(status)
             return [Task(**task) for task in tasks]
@@ -297,7 +297,7 @@ class VabHubAPI:
             }
 
         # Library management
-        @self.app.get("/api/library/servers", response_model=list[LibraryServer])
+        @self.app.get("/api/library/servers", response_model=List[LibraryServer])
         async def list_servers():
             servers = self.db_manager.get_media_servers()
             # Test connection for each server
@@ -355,7 +355,7 @@ class VabHubAPI:
             return {"server": server, "recently_added": items}
 
         # Downloaders management
-        @self.app.get("/api/dl/instances", response_model=list[DownloaderInstance])
+        @self.app.get("/api/dl/instances", response_model=List[DownloaderInstance])
         async def dl_instances():
             downloaders = self.db_manager.get_downloaders()
             return [DownloaderInstance(**downloader) for downloader in downloaders]
@@ -424,7 +424,7 @@ class VabHubAPI:
             return {"local": {"library": "/srv/media/library"}, "cloud": {}}
 
         @self.app.put("/api/storage/config")
-        async def storage_conf_put(conf: dict[str, Any]):
+        async def storage_conf_put(conf: Dict[str, Any]):
             return conf
 
         # STRM gateway
@@ -464,7 +464,7 @@ class VabHubAPI:
                 )
 
         @self.app.post("/api/strm/organize")
-        async def organize_strm_files(rules: dict[str, Any] = {}):
+        async def organize_strm_files(rules: Dict[str, Any] = {}):
             """Organize STRM files based on rules"""
             try:
                 organized_files = self.strm_gateway_manager.organize_strm_files(rules)
@@ -488,7 +488,7 @@ class VabHubAPI:
                 )
 
         @self.app.post("/api/strm/batch-generate")
-        async def batch_generate_strm_files(media_list: list[dict[str, Any]]):
+        async def batch_generate_strm_files(media_list: List[Dict[str, Any]]):
             """Batch generate STRM files"""
             try:
                 results = self.strm_gateway_manager.batch_generate_strm_files(
@@ -531,7 +531,7 @@ class VabHubAPI:
             return SecretStatus(sops_enabled=False, age_key_present=False)
 
         # Charts API endpoints
-        @self.app.get("/api/charts", response_model=list[ChartItem])
+        @self.app.get("/api/charts", response_model=List[ChartItem])
         async def get_charts(
             source: str = Query(
                 ..., description="数据源: tmdb, spotify, apple_music, bangumi"

@@ -25,9 +25,9 @@ def batch_rename(files: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     pass
 
 # 修复后
-from typing import Any
+from typing import Any, List, Dict
 
-def batch_rename(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def batch_rename(files: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     pass
 ```
 

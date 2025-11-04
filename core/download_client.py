@@ -4,7 +4,7 @@ DownloadClient抽象接口和具体实现
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union, cast
 from enum import Enum
 import asyncio
 import logging
@@ -114,9 +114,9 @@ class DownloadClient(ABC):
     async def add_torrent(
         self,
         torrent: Union[str, bytes],
-        save_path: str = None,
-        category: str = None,
-        tags: List[str] = None,
+        save_path: Optional[str] = None,
+        category: Optional[str] = None,
+        tags: Optional[List[str]] = None,
         **kwargs,
     ) -> bool:
         """添加种子"""
@@ -191,25 +191,27 @@ class QbittorrentClient(DownloadClient):
 
     def __init__(self, config: DownloadClientConfig):
         super().__init__(config)
-        self._client = None
+        self._client = None  # type: Optional[Any]
 
     async def connect(self) -> bool:
         """连接qBittorrent"""
         try:
             from qbittorrentapi import Client, LoginFailed
 
-            self._client = Client(
+            # 注意：qbittorrentapi的Client不接受timeout参数
+            from qbittorrentapi import Client
+            self._client = cast(Any, Client(
                 host=self.config.host,
                 port=self.config.port,
                 username=self.config.username,
                 password=self.config.password,
-                timeout=self.config.timeout,
-            )
+            ))
 
             # 测试连接
-            await asyncio.get_event_loop().run_in_executor(
-                None, lambda: self._client.auth_log_in()
-            )
+            if self._client:
+                await asyncio.get_event_loop().run_in_executor(
+                    None, lambda: self._client.auth_log_in()
+                )
 
             self._connected = True
             logger.info(f"成功连接到qBittorrent: {self.config.base_url}")
@@ -240,9 +242,9 @@ class QbittorrentClient(DownloadClient):
     async def add_torrent(
         self,
         torrent: Union[str, bytes],
-        save_path: str = None,
-        category: str = None,
-        tags: List[str] = None,
+        save_path: Optional[str] = None,
+        category: Optional[str] = None,
+        tags: Optional[List[str]] = None,
         **kwargs,
     ) -> bool:
         """添加种子到qBittorrent"""
@@ -262,19 +264,20 @@ class QbittorrentClient(DownloadClient):
             # 合并额外参数
             add_params.update(kwargs)
 
-            if isinstance(torrent, str):
-                # URL或磁力链接
-                result = await asyncio.get_event_loop().run_in_executor(
-                    None, lambda: self._client.torrents_add(urls=torrent, **add_params)
-                )
-            else:
-                # 种子文件内容
-                result = await asyncio.get_event_loop().run_in_executor(
-                    None,
-                    lambda: self._client.torrents_add(
-                        torrent_files=torrent, **add_params
-                    ),
-                )
+            if self._client:
+                if isinstance(torrent, str):
+                    # URL或磁力链接
+                    result = await asyncio.get_event_loop().run_in_executor(
+                        None, lambda: self._client.torrents_add(urls=torrent, **add_params)
+                    )
+                else:
+                    # 种子文件内容
+                    result = await asyncio.get_event_loop().run_in_executor(
+                        None,
+                        lambda: self._client.torrents_add(
+                            torrent_files=torrent, **add_params
+                        ),
+                    )
 
             logger.info(
                 f"成功添加种子到qBittorrent: {torrent if isinstance(torrent, str) else 'torrent file'}"
@@ -287,7 +290,7 @@ class QbittorrentClient(DownloadClient):
 
     async def pause_torrent(self, torrent_hash: str) -> bool:
         """暂停种子"""
-        if not self._connected:
+        if not self._connected or not self._client:
             return False
 
         try:
@@ -301,7 +304,7 @@ class QbittorrentClient(DownloadClient):
 
     async def resume_torrent(self, torrent_hash: str) -> bool:
         """恢复种子"""
-        if not self._connected:
+        if not self._connected or not self._client:
             return False
 
         try:
@@ -317,7 +320,7 @@ class QbittorrentClient(DownloadClient):
         self, torrent_hash: str, delete_files: bool = False
     ) -> bool:
         """删除种子"""
-        if not self._connected:
+        if not self._connected or not self._client:
             return False
 
         try:
@@ -338,7 +341,7 @@ class QbittorrentClient(DownloadClient):
         category: Optional[str] = None,
     ) -> List[TorrentInfo]:
         """获取种子列表"""
-        if not self._connected:
+        if not self._connected or not self._client:
             return []
 
         try:
@@ -384,7 +387,7 @@ class QbittorrentClient(DownloadClient):
 
     async def get_torrent(self, torrent_hash: str) -> Optional[TorrentInfo]:
         """获取单个种子信息"""
-        if not self._connected:
+        if not self._connected or not self._client:
             return None
 
         try:
@@ -419,7 +422,7 @@ class QbittorrentClient(DownloadClient):
 
     async def set_category(self, torrent_hash: str, category: str) -> bool:
         """设置种子分类"""
-        if not self._connected:
+        if not self._connected or not self._client:
             return False
 
         try:
@@ -436,7 +439,7 @@ class QbittorrentClient(DownloadClient):
 
     async def set_ratio_limit(self, torrent_hash: str, ratio: float) -> bool:
         """设置分享率限制"""
-        if not self._connected:
+        if not self._connected or not self._client:
             return False
 
         try:
@@ -455,7 +458,7 @@ class QbittorrentClient(DownloadClient):
         self, torrent_hash: str, download_limit: int = 0, upload_limit: int = 0
     ) -> bool:
         """设置速度限制"""
-        if not self._connected:
+        if not self._connected or not self._client:
             return False
 
         try:
@@ -482,7 +485,7 @@ class QbittorrentClient(DownloadClient):
 
     async def get_transfer_info(self) -> Dict[str, Any]:
         """获取传输统计信息"""
-        if not self._connected:
+        if not self._connected or not self._client:
             return {}
 
         try:
@@ -505,7 +508,7 @@ class QbittorrentClient(DownloadClient):
         """测试连接"""
         try:
             connected = await self.connect()
-            if connected:
+            if connected and self._client:
                 version = await asyncio.get_event_loop().run_in_executor(
                     None, lambda: self._client.app_version()
                 )

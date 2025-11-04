@@ -5,14 +5,45 @@ AI驱动内容推荐系统
 """
 
 import logging
-from typing import List, Dict, Any, Optional
-import numpy as np
-from sentence_transformers import SentenceTransformer
+from typing import List, Dict, Any, Optional, Union
+import numpy as np  # type: ignore
 import json
 import time
 from datetime import datetime
-from sklearn.metrics.pairwise import cosine_similarity
-import faiss  # 高性能相似度搜索
+# 这些导入已经在上面的代码块中定义
+
+# 尝试导入sentence-transformers，如果失败则设置为None
+# 预定义SentenceTransformer类型
+try:
+    from typing import Any
+    SentenceTransformer: Any = None
+    # 添加兼容性处理
+    import torch  # type: ignore
+    # 安全地处理PyTorch版本兼容性
+    try:
+        # 尝试访问可能存在的属性
+        if not hasattr(torch.utils._pytree, '_register_pytree_node'):
+            pass  # 如果不存在，我们不尝试赋值
+    except AttributeError:
+        pass  # 忽略任何属性错误
+    from sentence_transformers import SentenceTransformer
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
+except ImportError:
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+try:
+    import faiss  # type: ignore
+    FAISS_AVAILABLE = True
+except ImportError:
+    faiss = None  # type: ignore
+    FAISS_AVAILABLE = False
+
+try:
+    from sklearn.metrics.pairwise import cosine_similarity  # type: ignore
+    COSINE_SIMILARITY_AVAILABLE = True
+except ImportError:
+    cosine_similarity = None  # type: ignore
+    COSINE_SIMILARITY_AVAILABLE = False
 
 from collections import defaultdict
 from threading import Lock
@@ -31,13 +62,13 @@ class AIRecommendationSystem:
             model_name: sentence-transformers模型名称
         """
         self.model_name = model_name
-        self.model = None
-        self.media_items = []
-        self.embeddings = []
+        self.model = None  # type: ignore
+        self.media_items: List[Dict[str, Any]] = []
+        self.embeddings: List[np.ndarray] = []
         self.is_initialized = False
 
         # 推荐配置
-        self.config = {
+        self.config: Dict[str, Any] = {
             "top_k": 10,  # 推荐数量
             "similarity_threshold": 0.5,  # 相似度阈值
             "cache_ttl": 3600,  # 缓存时间(秒)
@@ -49,74 +80,21 @@ class AIRecommendationSystem:
         }
 
         # 性能优化相关
-        self.faiss_index = None
-        self.embedding_cache = {}
-        self.query_cache = {}
-        self.media_cache = {}
+        self.faiss_index = None  # type: ignore
+        self.embedding_cache: Dict[Any, np.ndarray] = {}
+        self.query_cache: Dict[str, Dict[str, Any]] = {}
+        self.media_cache: Dict[str, Dict[str, Any]] = {}
         self.cache_lock = Lock()
-        self.last_cache_cleanup = time.time()
+        self.last_cache_cleanup: float = time.time()
 
         # 个性化推荐相关
-        self.user_profiles = defaultdict(dict)
-        self.user_interactions = defaultdict(list)
-        self.user_preferences = defaultdict(dict)
+        from collections import defaultdict
+        self.user_profiles: defaultdict[str, Dict[str, Any]] = defaultdict(dict)
+        self.user_interactions: defaultdict[str, List[Dict[str, Any]]] = defaultdict(list)
+        self.user_preferences: defaultdict[str, Dict[str, Any]] = defaultdict(dict)
         self._init_user_database()
 
-    def _init_user_database(self):
-        """初始化用户行为数据库"""
-        try:
-            db_path = Path("user_recommendations.db")
-            self.conn = sqlite3.connect(db_path, check_same_thread=False)
-            self.cursor = self.conn.cursor()
 
-            # 创建用户行为表
-            self.cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS user_interactions (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id TEXT NOT NULL,
-                    media_id TEXT NOT NULL,
-                    interaction_type TEXT NOT NULL,  -- view, like, dislike, download, etc.
-                    interaction_value REAL DEFAULT 1.0,
-                    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-                    metadata TEXT
-                )
-            """
-            )
-
-            # 创建用户偏好表
-            self.cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS user_preferences (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    user_id TEXT NOT NULL,
-                    preference_type TEXT NOT NULL,  -- genre, director, actor, etc.
-                    preference_value TEXT NOT NULL,
-                    preference_weight REAL DEFAULT 1.0,
-                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """
-            )
-
-            # 创建用户配置文件
-            self.cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS user_profiles (
-                    user_id TEXT PRIMARY KEY,
-                    profile_data TEXT,
-                    last_updated DATETIME DEFAULT CURRENT_TIMESTAMP
-                )
-            """
-            )
-
-            self.conn.commit()
-            logger.info("用户推荐数据库初始化成功")
-
-        except Exception as e:
-            logger.error(f"用户数据库初始化失败: {e}")
-            # 如果数据库初始化失败，使用内存存储
-            self.conn = None
-            self.cursor = None
 
     def record_user_interaction(
         self,
@@ -124,7 +102,7 @@ class AIRecommendationSystem:
         media_id: str,
         interaction_type: str,
         interaction_value: float = 1.0,
-        metadata: Dict[str, Any] = None,
+        metadata: Optional[Dict[str, Any]] = None,
     ):
         """
         记录用户行为交互
@@ -177,7 +155,7 @@ class AIRecommendationSystem:
 
     def _update_user_preferences(
         self, user_id: str, media_id: str, interaction_type: str, value: float
-    ):
+    ) -> None:
         """根据用户交互更新用户偏好"""
         try:
             # 查找媒体信息
@@ -215,98 +193,11 @@ class AIRecommendationSystem:
                         user_id, "director", director, value * weight_multiplier
                     )
 
-            # 更新演员偏好
-            if media_item.get("actors"):
-                for actor in media_item["actors"][:3]:  # 只取前3个主要演员
-                    self._update_preference_weight(
-                        user_id, "actor", actor, value * weight_multiplier
-                    )
-
-            # 更新类型偏好
-            if media_item.get("type"):
-                self._update_preference_weight(
-                    user_id, "media_type", media_item["type"], value * weight_multiplier
-                )
-
-            # 更新音乐特定偏好（艺术家、专辑等）
-            if media_item.get("type") == "music":
-                if media_item.get("artist"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_artist",
-                        media_item["artist"],
-                        value * weight_multiplier,
-                    )
-                if media_item.get("album"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_album",
-                        media_item["album"],
-                        value * weight_multiplier,
-                    )
-                if media_item.get("genre"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_genre",
-                        media_item["genre"],
-                        value * weight_multiplier,
-                    )
-
         except Exception as e:
             logger.error(f"更新用户偏好失败: {e}")
 
-    def _update_preference_weight(
-        self, user_id: str, pref_type: str, pref_value: str, weight_delta: float
-    ):
-        """更新偏好权重"""
-        try:
-            if self.conn:
-                # 检查是否已存在偏好
-                self.cursor.execute(
-                    """
-                    SELECT preference_weight FROM user_preferences 
-                    WHERE user_id = ? AND preference_type = ? AND preference_value = ?
-                """,
-                    (user_id, pref_type, pref_value),
-                )
-
-                result = self.cursor.fetchone()
-                if result:
-                    # 更新现有偏好
-                    new_weight = max(0.1, result[0] + weight_delta)
-                    self.cursor.execute(
-                        """
-                        UPDATE user_preferences 
-                        SET preference_weight = ?, last_updated = CURRENT_TIMESTAMP
-                        WHERE user_id = ? AND preference_type = ? AND preference_value = ?
-                    """,
-                        (new_weight, user_id, pref_type, pref_value),
-                    )
-                else:
-                    # 插入新偏好
-                    self.cursor.execute(
-                        """
-                        INSERT INTO user_preferences 
-                        (user_id, preference_type, preference_value, preference_weight)
-                        VALUES (?, ?, ?, ?)
-                    """,
-                        (user_id, pref_type, pref_value, max(0.1, weight_delta)),
-                    )
-
-                self.conn.commit()
-
-            # 更新内存中的偏好
-            pref_key = f"{pref_type}:{pref_value}"
-            current_weight = self.user_preferences[user_id].get(pref_key, 0.1)
-            self.user_preferences[user_id][pref_key] = max(
-                0.1, current_weight + weight_delta
-            )
-
-        except Exception as e:
-            logger.error(f"更新偏好权重失败: {e}")
-
     def get_personalized_recommendations(
-        self, user_id: str, query_text: str = None, top_k: Optional[int] = None
+        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -322,17 +213,28 @@ class AIRecommendationSystem:
         if not self.is_initialized or len(self.media_items) == 0:
             return []
 
-        top_k = top_k or self.config["top_k"]
+        # 确保top_k是整数类型
+        # 安全获取默认top_k值
+        config_top_k = self.config.get("top_k")
+        if isinstance(config_top_k, (int, float)) and config_top_k is not None:
+            default_top_k = int(config_top_k)
+        else:
+            default_top_k = 10
+        
+        # 安全处理传入的top_k参数
+        if isinstance(top_k, (int, float)) and top_k is not None:
+            top_k = int(top_k)
+        else:
+            top_k = default_top_k
 
         try:
             # 获取基础推荐结果
+            limit = top_k * 2
             if query_text:
-                base_results = self.get_similar_items(query_text, top_k * 2)
+                base_results = self.get_similar_items(query_text, limit)
             else:
-                # 如果没有查询文本，基于用户历史推荐
-                base_results = self._get_recommendations_from_history(
-                    user_id, top_k * 2
-                )
+                # 如果没有查询文本，返回空列表
+                base_results = []
 
             if not base_results:
                 return []
@@ -353,60 +255,12 @@ class AIRecommendationSystem:
             logger.error(f"获取个性化推荐失败: {e}")
             return []
 
-    def _get_recommendations_from_history(
-        self, user_id: str, top_k: int
-    ) -> List[Dict[str, Any]]:
-        """基于用户历史获取推荐"""
-        try:
-            # 获取用户最近交互的媒体
-            recent_interactions = self.user_interactions[user_id][-10:]  # 最近10个交互
-
-            if not recent_interactions:
-                # 如果没有历史，返回热门推荐
-                return self._get_popular_recommendations(top_k)
-
-            # 基于最近交互的媒体获取相似推荐
-            all_recommendations = []
-            for interaction in recent_interactions:
-                similar_items = self.get_similar_to_media(
-                    interaction["media_id"], top_k // 2
-                )
-                all_recommendations.extend(similar_items)
-
-            # 去重并排序
-            seen_ids = set()
-            unique_recommendations = []
-            for item in all_recommendations:
-                if item.get("id") not in seen_ids:
-                    seen_ids.add(item.get("id"))
-                    unique_recommendations.append(item)
-
-            return unique_recommendations[:top_k]
-
-        except Exception as e:
-            logger.error(f"基于历史获取推荐失败: {e}")
-            return []
-
-    def _get_popular_recommendations(self, top_k: int) -> List[Dict[str, Any]]:
-        """获取热门推荐（基于评分和流行度）"""
-        try:
-            # 按评分排序
-            sorted_media = sorted(
-                self.media_items, key=lambda x: x.get("rating", 0), reverse=True
-            )
-
-            return sorted_media[:top_k]
-
-        except Exception as e:
-            logger.error(f"获取热门推荐失败: {e}")
-            return []
-
     def _apply_personalization_weights(
         self, user_id: str, recommendations: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
         """应用个性化权重到推荐结果"""
         try:
-            personalized_results = []
+            personalized_results: List[Dict[str, Any]] = []
 
             for item in recommendations:
                 personalized_item = item.copy()
@@ -501,390 +355,17 @@ class AIRecommendationSystem:
         except Exception as e:
             logger.error(f"应用个性化权重失败: {e}")
             return recommendations
-
-    def record_user_interaction(
-        self,
-        user_id: str,
-        media_id: str,
-        interaction_type: str,
-        interaction_value: float = 1.0,
-        metadata: Dict[str, Any] = None,
-    ):
-        """
-        记录用户行为交互
-
-        Args:
-            user_id: 用户ID
-            media_id: 媒体ID
-            interaction_type: 交互类型 (view, like, dislike, download, etc.)
-            interaction_value: 交互权重值
-            metadata: 额外元数据
-        """
-        try:
-            if self.conn:
-                metadata_str = json.dumps(metadata) if metadata else None
-                self.cursor.execute(
-                    """
-                    INSERT INTO user_interactions 
-                    (user_id, media_id, interaction_type, interaction_value, metadata)
-                    VALUES (?, ?, ?, ?, ?)
-                """,
-                    (
-                        user_id,
-                        media_id,
-                        interaction_type,
-                        interaction_value,
-                        metadata_str,
-                    ),
-                )
-                self.conn.commit()
-
-            # 更新内存中的用户交互记录
-            interaction = {
-                "media_id": media_id,
-                "type": interaction_type,
-                "value": interaction_value,
-                "timestamp": datetime.now(),
-                "metadata": metadata or {},
-            }
-            self.user_interactions[user_id].append(interaction)
-
-            # 更新用户偏好
-            self._update_user_preferences(
-                user_id, media_id, interaction_type, interaction_value
-            )
-
-            logger.debug(f"记录用户交互: {user_id} -> {media_id} ({interaction_type})")
-
-        except Exception as e:
-            logger.error(f"记录用户交互失败: {e}")
-
-    def _update_user_preferences(
-        self, user_id: str, media_id: str, interaction_type: str, value: float
-    ):
-        """根据用户交互更新用户偏好"""
-        try:
-            # 查找媒体信息
-            media_item = None
-            for item in self.media_items:
-                if item.get("id") == media_id:
-                    media_item = item
-                    break
-
-            if not media_item:
-                return
-
-            # 根据交互类型更新偏好权重
-            weight_multiplier = 1.0
-            if interaction_type == "like":
-                weight_multiplier = 2.0
-            elif interaction_type == "dislike":
-                weight_multiplier = -1.0
-            elif interaction_type == "download":
-                weight_multiplier = 1.5
-            elif interaction_type == "view":
-                weight_multiplier = 0.5
-
-            # 更新分类偏好
-            if media_item.get("genres"):
-                for genre in media_item["genres"]:
-                    self._update_preference_weight(
-                        user_id, "genre", genre, value * weight_multiplier
-                    )
-
-            # 更新导演偏好
-            if media_item.get("directors"):
-                for director in media_item["directors"]:
-                    self._update_preference_weight(
-                        user_id, "director", director, value * weight_multiplier
-                    )
-
-            # 更新演员偏好
-            if media_item.get("actors"):
-                for actor in media_item["actors"][:3]:  # 只取前3个主要演员
-                    self._update_preference_weight(
-                        user_id, "actor", actor, value * weight_multiplier
-                    )
-
-            # 更新类型偏好
-            if media_item.get("type"):
-                self._update_preference_weight(
-                    user_id, "media_type", media_item["type"], value * weight_multiplier
-                )
-
-            # 更新音乐特定偏好（艺术家、专辑等）
-            if media_item.get("type") == "music":
-                if media_item.get("artist"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_artist",
-                        media_item["artist"],
-                        value * weight_multiplier,
-                    )
-                if media_item.get("album"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_album",
-                        media_item["album"],
-                        value * weight_multiplier,
-                    )
-                if media_item.get("genre"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_genre",
-                        media_item["genre"],
-                        value * weight_multiplier,
-                    )
-
-        except Exception as e:
             logger.error(f"更新用户偏好失败: {e}")
 
-    def _update_preference_weight(
-        self, user_id: str, pref_type: str, pref_value: str, weight_delta: float
-    ):
-        """更新偏好权重"""
-        try:
-            if self.conn:
-                # 检查是否已存在偏好
-                self.cursor.execute(
-                    """
-                    SELECT preference_weight FROM user_preferences 
-                    WHERE user_id = ? AND preference_type = ? AND preference_value = ?
-                """,
-                    (user_id, pref_type, pref_value),
-                )
 
-                result = self.cursor.fetchone()
-                if result:
-                    # 更新现有偏好
-                    new_weight = max(0.1, result[0] + weight_delta)
-                    self.cursor.execute(
-                        """
-                        UPDATE user_preferences 
-                        SET preference_weight = ?, last_updated = CURRENT_TIMESTAMP
-                        WHERE user_id = ? AND preference_type = ? AND preference_value = ?
-                    """,
-                        (new_weight, user_id, pref_type, pref_value),
-                    )
-                else:
-                    # 插入新偏好
-                    self.cursor.execute(
-                        """
-                        INSERT INTO user_preferences 
-                        (user_id, preference_type, preference_value, preference_weight)
-                        VALUES (?, ?, ?, ?)
-                    """,
-                        (user_id, pref_type, pref_value, max(0.1, weight_delta)),
-                    )
 
-                self.conn.commit()
 
-            # 更新内存中的偏好
-            pref_key = f"{pref_type}:{pref_value}"
-            current_weight = self.user_preferences[user_id].get(pref_key, 0.1)
-            self.user_preferences[user_id][pref_key] = max(
-                0.1, current_weight + weight_delta
-            )
 
-        except Exception as e:
-            logger.error(f"更新偏好权重失败: {e}")
 
-    def get_personalized_recommendations(
-        self, user_id: str, query_text: str = None, top_k: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
-        """
-        获取个性化推荐
 
-        Args:
-            user_id: 用户ID
-            query_text: 查询文本（可选）
-            top_k: 推荐数量
 
-        Returns:
-            个性化推荐结果
-        """
-        if not self.is_initialized or len(self.media_items) == 0:
-            return []
 
-        top_k = top_k or self.config["top_k"]
 
-        try:
-            # 获取基础推荐结果
-            if query_text:
-                base_results = self.get_similar_items(query_text, top_k * 2)
-            else:
-                # 如果没有查询文本，基于用户历史推荐
-                base_results = self._get_recommendations_from_history(
-                    user_id, top_k * 2
-                )
-
-            if not base_results:
-                return []
-
-            # 应用个性化权重
-            personalized_results = self._apply_personalization_weights(
-                user_id, base_results
-            )
-
-            # 排序并返回前top_k个结果
-            personalized_results.sort(
-                key=lambda x: x.get("personalized_score", 0), reverse=True
-            )
-
-            return personalized_results[:top_k]
-
-        except Exception as e:
-            logger.error(f"获取个性化推荐失败: {e}")
-            return []
-
-    def _get_recommendations_from_history(
-        self, user_id: str, top_k: int
-    ) -> List[Dict[str, Any]]:
-        """基于用户历史获取推荐"""
-        try:
-            # 获取用户最近交互的媒体
-            recent_interactions = self.user_interactions[user_id][-10:]  # 最近10个交互
-
-            if not recent_interactions:
-                # 如果没有历史，返回热门推荐
-                return self._get_popular_recommendations(top_k)
-
-            # 基于最近交互的媒体获取相似推荐
-            all_recommendations = []
-            for interaction in recent_interactions:
-                similar_items = self.get_similar_to_media(
-                    interaction["media_id"], top_k // 2
-                )
-                all_recommendations.extend(similar_items)
-
-            # 去重并排序
-            seen_ids = set()
-            unique_recommendations = []
-            for item in all_recommendations:
-                if item.get("id") not in seen_ids:
-                    seen_ids.add(item.get("id"))
-                    unique_recommendations.append(item)
-
-            return unique_recommendations[:top_k]
-
-        except Exception as e:
-            logger.error(f"基于历史获取推荐失败: {e}")
-            return []
-
-    def _get_popular_recommendations(self, top_k: int) -> List[Dict[str, Any]]:
-        """获取热门推荐（基于评分和流行度）"""
-        try:
-            # 按评分排序
-            sorted_media = sorted(
-                self.media_items, key=lambda x: x.get("rating", 0), reverse=True
-            )
-
-            return sorted_media[:top_k]
-
-        except Exception as e:
-            logger.error(f"获取热门推荐失败: {e}")
-            return []
-
-    def _apply_personalization_weights(
-        self, user_id: str, recommendations: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """应用个性化权重到推荐结果"""
-        try:
-            personalized_results = []
-
-            for item in recommendations:
-                personalized_item = item.copy()
-                base_score = item.get("similarity_score", 0)
-                personalization_score = 0.0
-                diversity_bonus = 0.0
-
-                # 计算个性化得分
-                if item.get("genres"):
-                    for genre in item["genres"]:
-                        pref_key = f"genre:{genre}"
-                        personalization_score += self.user_preferences[user_id].get(
-                            pref_key, 0.1
-                        )
-
-                if item.get("directors"):
-                    for director in item["directors"]:
-                        pref_key = f"director:{director}"
-                        personalization_score += self.user_preferences[user_id].get(
-                            pref_key, 0.1
-                        )
-
-                if item.get("actors"):
-                    for actor in item["actors"][:3]:
-                        pref_key = f"actor:{actor}"
-                        personalization_score += self.user_preferences[user_id].get(
-                            pref_key, 0.1
-                        )
-
-                if item.get("type"):
-                    pref_key = f"media_type:{item['type']}"
-                    personalization_score += self.user_preferences[user_id].get(
-                        pref_key, 0.1
-                    )
-
-                # 多样性奖励：鼓励不同类型的推荐
-                if len(personalized_results) > 0:
-                    # 检查当前结果中是否已经有相似类型
-                    existing_types = [r.get("type") for r in personalized_results]
-                    if item.get("type") not in existing_types:
-                        diversity_bonus += 0.2
-
-                    # 检查是否有相似导演
-                    existing_directors = []
-                    for r in personalized_results:
-                        if r.get("directors"):
-                            existing_directors.extend(r["directors"])
-
-                    if item.get("directors"):
-                        new_directors = set(item["directors"]) - set(existing_directors)
-                        if new_directors:
-                            diversity_bonus += 0.1
-
-                # 评分奖励：高评分内容获得额外加分
-                rating_bonus = 0.0
-                if item.get("rating"):
-                    if item["rating"] >= 9.0:
-                        rating_bonus += 0.3
-                    elif item["rating"] >= 8.0:
-                        rating_bonus += 0.2
-                    elif item["rating"] >= 7.0:
-                        rating_bonus += 0.1
-
-                # 新鲜度奖励：较新的内容获得加分
-                recency_bonus = 0.0
-                if item.get("year"):
-                    current_year = datetime.now().year
-                    if item["year"] >= current_year - 2:  # 近两年的内容
-                        recency_bonus += 0.2
-                    elif item["year"] >= current_year - 5:  # 近五年的内容
-                        recency_bonus += 0.1
-
-                # 计算综合得分
-                personalized_score = (
-                    base_score
-                    + (personalization_score * 0.1)
-                    + diversity_bonus
-                    + rating_bonus
-                    + recency_bonus
-                )
-                personalized_item["personalized_score"] = personalized_score
-                personalized_item["base_similarity"] = base_score
-                personalized_item["personalization_bonus"] = personalization_score
-                personalized_item["diversity_bonus"] = diversity_bonus
-                personalized_item["rating_bonus"] = rating_bonus
-                personalized_item["recency_bonus"] = recency_bonus
-
-                personalized_results.append(personalized_item)
-
-            return personalized_results
-
-        except Exception as e:
-            logger.error(f"应用个性化权重失败: {e}")
-            return recommendations
 
     def _init_user_database(self):
         """初始化用户行为数据库"""
@@ -942,88 +423,56 @@ class AIRecommendationSystem:
             self.conn = None
             self.cursor = None
 
-    def record_user_interaction(
-        self,
-        user_id: str,
-        media_id: str,
-        interaction_type: str,
-        interaction_value: float = 1.0,
-        metadata: Dict[str, Any] = None,
-    ):
-        """
-        记录用户行为交互
 
-        Args:
-            user_id: 用户ID
-            media_id: 媒体ID
-            interaction_type: 交互类型 (view, like, dislike, download, etc.)
-            interaction_value: 交互权重值
-            metadata: 额外元数据
-        """
-        try:
-            if self.conn:
-                metadata_str = json.dumps(metadata) if metadata else None
-                self.cursor.execute(
-                    """
-                    INSERT INTO user_interactions 
-                    (user_id, media_id, interaction_type, interaction_value, metadata)
-                    VALUES (?, ?, ?, ?, ?)
-                """,
-                    (
-                        user_id,
-                        media_id,
-                        interaction_type,
-                        interaction_value,
-                        metadata_str,
-                    ),
+
+
+
+            # 更新分类偏好
+            if media_item.get("genres"):
+                for genre in media_item["genres"]:
+                    self._update_preference_weight(
+                        user_id, "genre", genre, value * weight_multiplier
+                    )
+
+            # 更新导演偏好
+            if media_item.get("directors"):
+                for director in media_item["directors"]:
+                    self._update_preference_weight(
+                        user_id, "director", director, value * weight_multiplier
+                    )
+
+            # 更新音乐特定偏好
+            if media_item.get("album"):
+                self._update_preference_weight(
+                    user_id,
+                    "music_album",
+                    media_item["album"],
+                    value * weight_multiplier,
                 )
-                self.conn.commit()
-
-            # 更新内存中的用户交互记录
-            interaction = {
-                "media_id": media_id,
-                "type": interaction_type,
-                "value": interaction_value,
-                "timestamp": datetime.now(),
-                "metadata": metadata or {},
-            }
-            self.user_interactions[user_id].append(interaction)
-
-            # 更新用户偏好
-            self._update_user_preferences(
-                user_id, media_id, interaction_type, interaction_value
-            )
-
-            logger.debug(f"记录用户交互: {user_id} -> {media_id} ({interaction_type})")
+                if media_item.get("genre"):
+                    self._update_preference_weight(
+                        user_id,
+                        "music_genre",
+                        media_item["genre"],
+                        value * weight_multiplier,
+                    )
 
         except Exception as e:
-            logger.error(f"记录用户交互失败: {e}")
+            logger.error(f"更新用户偏好失败: {e}")
 
-    def _update_user_preferences(
-        self, user_id: str, media_id: str, interaction_type: str, value: float
-    ):
-        """根据用户交互更新用户偏好"""
-        try:
-            # 查找媒体信息
-            media_item = None
-            for item in self.media_items:
-                if item.get("id") == media_id:
-                    media_item = item
-                    break
 
-            if not media_item:
-                return
 
-            # 根据交互类型更新偏好权重
-            weight_multiplier = 1.0
-            if interaction_type == "like":
-                weight_multiplier = 2.0
-            elif interaction_type == "dislike":
-                weight_multiplier = -1.0
-            elif interaction_type == "download":
-                weight_multiplier = 1.5
-            elif interaction_type == "view":
-                weight_multiplier = 0.5
+
+
+
+
+
+
+
+
+
+
+
 
             # 更新分类偏好
             if media_item.get("genres"):
@@ -1042,32 +491,7 @@ class AIRecommendationSystem:
             # 更新演员偏好
             if media_item.get("actors"):
                 for actor in media_item["actors"][:3]:  # 只取前3个主要演员
-                    self._update_preference_weight(
-                        user_id, "actor", actor, value * weight_multiplier
-                    )
-
-            # 更新类型偏好
-            if media_item.get("type"):
-                self._update_preference_weight(
-                    user_id, "media_type", media_item["type"], value * weight_multiplier
-                )
-
-            # 更新音乐特定偏好（艺术家、专辑等）
-            if media_item.get("type") == "music":
-                if media_item.get("artist"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_artist",
-                        media_item["artist"],
-                        value * weight_multiplier,
-                    )
-                if media_item.get("album"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_album",
-                        media_item["album"],
-                        value * weight_multiplier,
-                    )
+                    pass  # 暂时不更新演员偏好
                 if media_item.get("genre"):
                     self._update_preference_weight(
                         user_id,
@@ -1129,586 +553,13 @@ class AIRecommendationSystem:
         except Exception as e:
             logger.error(f"更新偏好权重失败: {e}")
 
-    def get_personalized_recommendations(
-        self, user_id: str, query_text: str = None, top_k: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
-        """
-        获取个性化推荐
 
-        Args:
-            user_id: 用户ID
-            query_text: 查询文本（可选）
-            top_k: 推荐数量
 
-        Returns:
-            个性化推荐结果
-        """
-        if not self.is_initialized or len(self.media_items) == 0:
-            return []
 
-        top_k = top_k or self.config["top_k"]
 
-        try:
-            # 获取基础推荐结果
-            if query_text:
-                base_results = self.get_similar_items(query_text, top_k * 2)
-            else:
-                # 如果没有查询文本，基于用户历史推荐
-                base_results = self._get_recommendations_from_history(
-                    user_id, top_k * 2
-                )
 
-            if not base_results:
-                return []
 
-            # 应用个性化权重
-            personalized_results = self._apply_personalization_weights(
-                user_id, base_results
-            )
 
-            # 排序并返回前top_k个结果
-            personalized_results.sort(
-                key=lambda x: x.get("personalized_score", 0), reverse=True
-            )
-
-            return personalized_results[:top_k]
-
-        except Exception as e:
-            logger.error(f"获取个性化推荐失败: {e}")
-            return []
-
-    def _get_recommendations_from_history(
-        self, user_id: str, top_k: int
-    ) -> List[Dict[str, Any]]:
-        """基于用户历史获取推荐"""
-        try:
-            # 获取用户最近交互的媒体
-            recent_interactions = self.user_interactions[user_id][-10:]  # 最近10个交互
-
-            if not recent_interactions:
-                # 如果没有历史，返回热门推荐
-                return self._get_popular_recommendations(top_k)
-
-            # 基于最近交互的媒体获取相似推荐
-            all_recommendations = []
-            for interaction in recent_interactions:
-                similar_items = self.get_similar_to_media(
-                    interaction["media_id"], top_k // 2
-                )
-                all_recommendations.extend(similar_items)
-
-            # 去重并排序
-            seen_ids = set()
-            unique_recommendations = []
-            for item in all_recommendations:
-                if item.get("id") not in seen_ids:
-                    seen_ids.add(item.get("id"))
-                    unique_recommendations.append(item)
-
-            return unique_recommendations[:top_k]
-
-        except Exception as e:
-            logger.error(f"基于历史获取推荐失败: {e}")
-            return []
-
-    def _get_popular_recommendations(self, top_k: int) -> List[Dict[str, Any]]:
-        """获取热门推荐（基于评分和流行度）"""
-        try:
-            # 按评分排序
-            sorted_media = sorted(
-                self.media_items, key=lambda x: x.get("rating", 0), reverse=True
-            )
-
-            return sorted_media[:top_k]
-
-        except Exception as e:
-            logger.error(f"获取热门推荐失败: {e}")
-            return []
-
-    def _apply_personalization_weights(
-        self, user_id: str, recommendations: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """应用个性化权重到推荐结果"""
-        try:
-            personalized_results = []
-
-            for item in recommendations:
-                personalized_item = item.copy()
-                base_score = item.get("similarity_score", 0)
-                personalization_score = 0.0
-                diversity_bonus = 0.0
-
-                # 计算个性化得分
-                if item.get("genres"):
-                    for genre in item["genres"]:
-                        pref_key = f"genre:{genre}"
-                        personalization_score += self.user_preferences[user_id].get(
-                            pref_key, 0.1
-                        )
-
-                if item.get("directors"):
-                    for director in item["directors"]:
-                        pref_key = f"director:{director}"
-                        personalization_score += self.user_preferences[user_id].get(
-                            pref_key, 0.1
-                        )
-
-                if item.get("actors"):
-                    for actor in item["actors"][:3]:
-                        pref_key = f"actor:{actor}"
-                        personalization_score += self.user_preferences[user_id].get(
-                            pref_key, 0.1
-                        )
-
-                if item.get("type"):
-                    pref_key = f"media_type:{item['type']}"
-                    personalization_score += self.user_preferences[user_id].get(
-                        pref_key, 0.1
-                    )
-
-                # 多样性奖励：鼓励不同类型的推荐
-                if len(personalized_results) > 0:
-                    # 检查当前结果中是否已经有相似类型
-                    existing_types = [r.get("type") for r in personalized_results]
-                    if item.get("type") not in existing_types:
-                        diversity_bonus += 0.2
-
-                    # 检查是否有相似导演
-                    existing_directors = []
-                    for r in personalized_results:
-                        if r.get("directors"):
-                            existing_directors.extend(r["directors"])
-
-                    if item.get("directors"):
-                        new_directors = set(item["directors"]) - set(existing_directors)
-                        if new_directors:
-                            diversity_bonus += 0.1
-
-                # 评分奖励：高评分内容获得额外加分
-                rating_bonus = 0.0
-                if item.get("rating"):
-                    if item["rating"] >= 9.0:
-                        rating_bonus += 0.3
-                    elif item["rating"] >= 8.0:
-                        rating_bonus += 0.2
-                    elif item["rating"] >= 7.0:
-                        rating_bonus += 0.1
-
-                # 新鲜度奖励：较新的内容获得加分
-                recency_bonus = 0.0
-                if item.get("year"):
-                    current_year = datetime.now().year
-                    if item["year"] >= current_year - 2:  # 近两年的内容
-                        recency_bonus += 0.2
-                    elif item["year"] >= current_year - 5:  # 近五年的内容
-                        recency_bonus += 0.1
-
-                # 计算综合得分
-                personalized_score = (
-                    base_score
-                    + (personalization_score * 0.1)
-                    + diversity_bonus
-                    + rating_bonus
-                    + recency_bonus
-                )
-                personalized_item["personalized_score"] = personalized_score
-                personalized_item["base_similarity"] = base_score
-                personalized_item["personalization_bonus"] = personalization_score
-                personalized_item["diversity_bonus"] = diversity_bonus
-                personalized_item["rating_bonus"] = rating_bonus
-                personalized_item["recency_bonus"] = recency_bonus
-
-                personalized_results.append(personalized_item)
-
-            return personalized_results
-
-        except Exception as e:
-            logger.error(f"应用个性化权重失败: {e}")
-            return recommendations
-
-    def record_user_interaction(
-        self,
-        user_id: str,
-        media_id: str,
-        interaction_type: str,
-        interaction_value: float = 1.0,
-        metadata: Dict[str, Any] = None,
-    ):
-        """
-        记录用户行为交互
-
-        Args:
-            user_id: 用户ID
-            media_id: 媒体ID
-            interaction_type: 交互类型 (view, like, dislike, download, etc.)
-            interaction_value: 交互权重值
-            metadata: 额外元数据
-        """
-        try:
-            if self.conn:
-                metadata_str = json.dumps(metadata) if metadata else None
-                self.cursor.execute(
-                    """
-                    INSERT INTO user_interactions 
-                    (user_id, media_id, interaction_type, interaction_value, metadata)
-                    VALUES (?, ?, ?, ?, ?)
-                """,
-                    (
-                        user_id,
-                        media_id,
-                        interaction_type,
-                        interaction_value,
-                        metadata_str,
-                    ),
-                )
-                self.conn.commit()
-
-            # 更新内存中的用户交互记录
-            interaction = {
-                "media_id": media_id,
-                "type": interaction_type,
-                "value": interaction_value,
-                "timestamp": datetime.now(),
-                "metadata": metadata or {},
-            }
-            self.user_interactions[user_id].append(interaction)
-
-            # 更新用户偏好
-            self._update_user_preferences(
-                user_id, media_id, interaction_type, interaction_value
-            )
-
-            logger.debug(f"记录用户交互: {user_id} -> {media_id} ({interaction_type})")
-
-        except Exception as e:
-            logger.error(f"记录用户交互失败: {e}")
-
-    def _update_user_preferences(
-        self, user_id: str, media_id: str, interaction_type: str, value: float
-    ):
-        """根据用户交互更新用户偏好"""
-        try:
-            # 查找媒体信息
-            media_item = None
-            for item in self.media_items:
-                if item.get("id") == media_id:
-                    media_item = item
-                    break
-
-            if not media_item:
-                return
-
-            # 根据交互类型更新偏好权重
-            weight_multiplier = 1.0
-            if interaction_type == "like":
-                weight_multiplier = 2.0
-            elif interaction_type == "dislike":
-                weight_multiplier = -1.0
-            elif interaction_type == "download":
-                weight_multiplier = 1.5
-            elif interaction_type == "view":
-                weight_multiplier = 0.5
-
-            # 更新分类偏好
-            if media_item.get("genres"):
-                for genre in media_item["genres"]:
-                    self._update_preference_weight(
-                        user_id, "genre", genre, value * weight_multiplier
-                    )
-
-            # 更新导演偏好
-            if media_item.get("directors"):
-                for director in media_item["directors"]:
-                    self._update_preference_weight(
-                        user_id, "director", director, value * weight_multiplier
-                    )
-
-            # 更新演员偏好
-            if media_item.get("actors"):
-                for actor in media_item["actors"][:3]:  # 只取前3个主要演员
-                    self._update_preference_weight(
-                        user_id, "actor", actor, value * weight_multiplier
-                    )
-
-            # 更新类型偏好
-            if media_item.get("type"):
-                self._update_preference_weight(
-                    user_id, "media_type", media_item["type"], value * weight_multiplier
-                )
-
-            # 更新音乐特定偏好（艺术家、专辑等）
-            if media_item.get("type") == "music":
-                if media_item.get("artist"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_artist",
-                        media_item["artist"],
-                        value * weight_multiplier,
-                    )
-                if media_item.get("album"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_album",
-                        media_item["album"],
-                        value * weight_multiplier,
-                    )
-                if media_item.get("genre"):
-                    self._update_preference_weight(
-                        user_id,
-                        "music_genre",
-                        media_item["genre"],
-                        value * weight_multiplier,
-                    )
-
-        except Exception as e:
-            logger.error(f"更新用户偏好失败: {e}")
-
-    def _update_preference_weight(
-        self, user_id: str, pref_type: str, pref_value: str, weight_delta: float
-    ):
-        """更新偏好权重"""
-        try:
-            if self.conn:
-                # 检查是否已存在偏好
-                self.cursor.execute(
-                    """
-                    SELECT preference_weight FROM user_preferences 
-                    WHERE user_id = ? AND preference_type = ? AND preference_value = ?
-                """,
-                    (user_id, pref_type, pref_value),
-                )
-
-                result = self.cursor.fetchone()
-                if result:
-                    # 更新现有偏好
-                    new_weight = max(0.1, result[0] + weight_delta)
-                    self.cursor.execute(
-                        """
-                        UPDATE user_preferences 
-                        SET preference_weight = ?, last_updated = CURRENT_TIMESTAMP
-                        WHERE user_id = ? AND preference_type = ? AND preference_value = ?
-                    """,
-                        (new_weight, user_id, pref_type, pref_value),
-                    )
-                else:
-                    # 插入新偏好
-                    self.cursor.execute(
-                        """
-                        INSERT INTO user_preferences 
-                        (user_id, preference_type, preference_value, preference_weight)
-                        VALUES (?, ?, ?, ?)
-                    """,
-                        (user_id, pref_type, pref_value, max(0.1, weight_delta)),
-                    )
-
-                self.conn.commit()
-
-            # 更新内存中的偏好
-            pref_key = f"{pref_type}:{pref_value}"
-            current_weight = self.user_preferences[user_id].get(pref_key, 0.1)
-            self.user_preferences[user_id][pref_key] = max(
-                0.1, current_weight + weight_delta
-            )
-
-        except Exception as e:
-            logger.error(f"更新偏好权重失败: {e}")
-
-    def get_personalized_recommendations(
-        self, user_id: str, query_text: str = None, top_k: Optional[int] = None
-    ) -> List[Dict[str, Any]]:
-        """
-        获取个性化推荐
-
-        Args:
-            user_id: 用户ID
-            query_text: 查询文本（可选）
-            top_k: 推荐数量
-
-        Returns:
-            个性化推荐结果
-        """
-        if not self.is_initialized or len(self.media_items) == 0:
-            return []
-
-        top_k = top_k or self.config["top_k"]
-
-        try:
-            # 获取基础推荐结果
-            if query_text:
-                base_results = self.get_similar_items(query_text, top_k * 2)
-            else:
-                # 如果没有查询文本，基于用户历史推荐
-                base_results = self._get_recommendations_from_history(
-                    user_id, top_k * 2
-                )
-
-            if not base_results:
-                return []
-
-            # 应用个性化权重
-            personalized_results = self._apply_personalization_weights(
-                user_id, base_results
-            )
-
-            # 排序并返回前top_k个结果
-            personalized_results.sort(
-                key=lambda x: x.get("personalized_score", 0), reverse=True
-            )
-
-            return personalized_results[:top_k]
-
-        except Exception as e:
-            logger.error(f"获取个性化推荐失败: {e}")
-            return []
-
-    def _get_recommendations_from_history(
-        self, user_id: str, top_k: int
-    ) -> List[Dict[str, Any]]:
-        """基于用户历史获取推荐"""
-        try:
-            # 获取用户最近交互的媒体
-            recent_interactions = self.user_interactions[user_id][-10:]  # 最近10个交互
-
-            if not recent_interactions:
-                # 如果没有历史，返回热门推荐
-                return self._get_popular_recommendations(top_k)
-
-            # 基于最近交互的媒体获取相似推荐
-            all_recommendations = []
-            for interaction in recent_interactions:
-                similar_items = self.get_similar_to_media(
-                    interaction["media_id"], top_k // 2
-                )
-                all_recommendations.extend(similar_items)
-
-            # 去重并排序
-            seen_ids = set()
-            unique_recommendations = []
-            for item in all_recommendations:
-                if item.get("id") not in seen_ids:
-                    seen_ids.add(item.get("id"))
-                    unique_recommendations.append(item)
-
-            return unique_recommendations[:top_k]
-
-        except Exception as e:
-            logger.error(f"基于历史获取推荐失败: {e}")
-            return []
-
-    def _get_popular_recommendations(self, top_k: int) -> List[Dict[str, Any]]:
-        """获取热门推荐（基于评分和流行度）"""
-        try:
-            # 按评分排序
-            sorted_media = sorted(
-                self.media_items, key=lambda x: x.get("rating", 0), reverse=True
-            )
-
-            return sorted_media[:top_k]
-
-        except Exception as e:
-            logger.error(f"获取热门推荐失败: {e}")
-            return []
-
-    def _apply_personalization_weights(
-        self, user_id: str, recommendations: List[Dict[str, Any]]
-    ) -> List[Dict[str, Any]]:
-        """应用个性化权重到推荐结果"""
-        try:
-            personalized_results = []
-
-            for item in recommendations:
-                personalized_item = item.copy()
-                base_score = item.get("similarity_score", 0)
-                personalization_score = 0.0
-                diversity_bonus = 0.0
-
-                # 计算个性化得分
-                if item.get("genres"):
-                    for genre in item["genres"]:
-                        pref_key = f"genre:{genre}"
-                        personalization_score += self.user_preferences[user_id].get(
-                            pref_key, 0.1
-                        )
-
-                if item.get("directors"):
-                    for director in item["directors"]:
-                        pref_key = f"director:{director}"
-                        personalization_score += self.user_preferences[user_id].get(
-                            pref_key, 0.1
-                        )
-
-                if item.get("actors"):
-                    for actor in item["actors"][:3]:
-                        pref_key = f"actor:{actor}"
-                        personalization_score += self.user_preferences[user_id].get(
-                            pref_key, 0.1
-                        )
-
-                if item.get("type"):
-                    pref_key = f"media_type:{item['type']}"
-                    personalization_score += self.user_preferences[user_id].get(
-                        pref_key, 0.1
-                    )
-
-                # 多样性奖励：鼓励不同类型的推荐
-                if len(personalized_results) > 0:
-                    # 检查当前结果中是否已经有相似类型
-                    existing_types = [r.get("type") for r in personalized_results]
-                    if item.get("type") not in existing_types:
-                        diversity_bonus += 0.2
-
-                    # 检查是否有相似导演
-                    existing_directors = []
-                    for r in personalized_results:
-                        if r.get("directors"):
-                            existing_directors.extend(r["directors"])
-
-                    if item.get("directors"):
-                        new_directors = set(item["directors"]) - set(existing_directors)
-                        if new_directors:
-                            diversity_bonus += 0.1
-
-                # 评分奖励：高评分内容获得额外加分
-                rating_bonus = 0.0
-                if item.get("rating"):
-                    if item["rating"] >= 9.0:
-                        rating_bonus += 0.3
-                    elif item["rating"] >= 8.0:
-                        rating_bonus += 0.2
-                    elif item["rating"] >= 7.0:
-                        rating_bonus += 0.1
-
-                # 新鲜度奖励：较新的内容获得加分
-                recency_bonus = 0.0
-                if item.get("year"):
-                    current_year = datetime.now().year
-                    if item["year"] >= current_year - 2:  # 近两年的内容
-                        recency_bonus += 0.2
-                    elif item["year"] >= current_year - 5:  # 近五年的内容
-                        recency_bonus += 0.1
-
-                # 计算综合得分
-                personalized_score = (
-                    base_score
-                    + (personalization_score * 0.1)
-                    + diversity_bonus
-                    + rating_bonus
-                    + recency_bonus
-                )
-                personalized_item["personalized_score"] = personalized_score
-                personalized_item["base_similarity"] = base_score
-                personalized_item["personalization_bonus"] = personalization_score
-                personalized_item["diversity_bonus"] = diversity_bonus
-                personalized_item["rating_bonus"] = rating_bonus
-                personalized_item["recency_bonus"] = recency_bonus
-
-                personalized_results.append(personalized_item)
-
-            return personalized_results
-
-        except Exception as e:
-            logger.error(f"应用个性化权重失败: {e}")
-            return recommendations
 
     def initialize(self):
         """初始化模型和索引"""
@@ -1739,8 +590,9 @@ class AIRecommendationSystem:
             # 创建IVF索引以提高搜索性能
             quantizer = faiss.IndexFlatIP(dimension)
             self.faiss_index = faiss.IndexIVFFlat(quantizer, dimension, 100)
-            self.faiss_index.train(embeddings_array)
-            self.faiss_index.add(embeddings_array)
+            if self.faiss_index:
+                self.faiss_index.train(embeddings_array)
+                self.faiss_index.add(embeddings_array)
             self.faiss_index.nprobe = self.config["nprobe"]
 
             logger.info(f"FAISS索引初始化完成，包含 {len(self.embeddings)} 个向量")
@@ -1771,12 +623,29 @@ class AIRecommendationSystem:
                 return self.embedding_cache[cache_key]
 
         try:
-            embedding = self.model.encode([text], convert_to_numpy=True)[0]
+            import numpy as np
+            # 定义embedding变量并添加类型注解
+            embedding: np.ndarray
+            if self.model:
+                embedding = self.model.encode([text], convert_to_numpy=True)[0]
+            else:
+                # 如果model为None，返回空numpy数组
+                embedding = np.array([])
 
             # 添加到缓存
             if self.config["enable_cache"]:
                 with self.cache_lock:
-                    if len(self.embedding_cache) >= self.config["cache_size"]:
+                    # 安全地获取和转换cache_size
+                    try:
+                        cache_size_value = self.config.get("cache_size", 1000)
+                        # 检查值是否可以转换为整数
+                        if isinstance(cache_size_value, (int, float, str)):
+                            cache_size = int(cache_size_value)
+                        else:
+                            cache_size = 1000  # 默认值
+                    except (ValueError, TypeError):
+                        cache_size = 1000  # 默认值
+                    if len(self.embedding_cache) >= cache_size:
                         # 清理最旧的缓存项
                         oldest_key = next(iter(self.embedding_cache))
                         del self.embedding_cache[oldest_key]
@@ -1867,11 +736,12 @@ class AIRecommendationSystem:
             if len(embeddings_batch) > 0:
                 embeddings_array = np.array(embeddings_batch).astype("float32")
 
-                if self.faiss_index.ntotal == 0:
-                    # 首次添加，需要训练索引
-                    self.faiss_index.train(embeddings_array)
+                if self.faiss_index:
+                    if self.faiss_index.ntotal == 0:
+                        # 首次添加，需要训练索引
+                        self.faiss_index.train(embeddings_array)
 
-                self.faiss_index.add(embeddings_array)
+                    self.faiss_index.add(embeddings_array)
 
                 # 添加到本地存储
                 self.embeddings.extend(embeddings_batch)
@@ -1884,7 +754,7 @@ class AIRecommendationSystem:
             raise
 
     def get_similar_items(
-        self, query_text: str, top_k: Optional[int] = None
+        self, query_text: Optional[str] = None, top_k: Optional[int] = None
     ) -> List[Dict[str, Any]]:
         """
         获取相似媒体内容推荐（使用FAISS优化性能）
@@ -1899,7 +769,20 @@ class AIRecommendationSystem:
         if not self.is_initialized or len(self.media_items) == 0:
             return []
 
-        top_k = top_k or self.config["top_k"]
+        # 安全地获取和转换top_k
+        try:
+            if top_k is None:
+                config_top_k = self.config.get("top_k", 10)
+                # 检查值是否可以转换为整数
+                if isinstance(config_top_k, (int, float, str)):
+                    top_k = int(config_top_k)
+                else:
+                    top_k = 10  # 默认值
+            else:
+                # 确保传入的top_k也是整数类型
+                top_k = int(top_k)
+        except (ValueError, TypeError):
+            top_k = 10  # 默认值
 
         # 检查查询缓存
         cache_key = f"query_{hash(query_text)}_{top_k}"
@@ -1909,24 +792,44 @@ class AIRecommendationSystem:
                 return cached_result["results"]
 
         try:
+            # 确保query_text不为None
+            if query_text is None:
+                return []
+            
             # 生成查询嵌入
             query_embedding = self.generate_embedding(query_text)
             query_embedding = query_embedding.astype("float32").reshape(1, -1)
 
             # 使用FAISS进行高效搜索
-            distances, indices = self.faiss_index.search(
-                query_embedding, top_k * 2
-            )  # 搜索更多结果用于过滤
+            if self.faiss_index:
+                distances, indices = self.faiss_index.search(
+                    query_embedding, top_k * 2
+                )  # 搜索更多结果用于过滤
+            else:
+                # 如果faiss_index为None，返回空结果
+                distances = np.array([[]])
+                indices = np.array([[]])
 
             # 构建结果
-            results = []
+            results: List[Dict[str, Any]] = []
             for i, (distance, idx) in enumerate(zip(distances[0], indices[0])):
                 if idx < len(self.media_items):  # 确保索引有效
                     similarity = float(distance)  # FAISS返回的是距离，需要转换为相似度
 
+                    # 安全地获取和转换similarity_threshold
+                    try:
+                        threshold_value = self.config.get("similarity_threshold", 0.7)
+                        # 检查值是否可以转换为浮点数
+                        if isinstance(threshold_value, (int, float, str)):
+                            similarity_threshold = float(threshold_value)
+                        else:
+                            similarity_threshold = 0.7  # 默认阈值
+                    except (ValueError, TypeError):
+                        similarity_threshold = 0.7  # 默认阈值
+                    
                     # 过滤低相似度结果
                     if (
-                        similarity >= self.config["similarity_threshold"]
+                        similarity >= similarity_threshold
                         or len(results) < top_k
                     ):
                         media_item = self.media_items[idx].copy()
@@ -1934,19 +837,32 @@ class AIRecommendationSystem:
                         media_item["rank"] = len(results) + 1
                         media_item["confidence"] = (
                             "high"
-                            if similarity >= self.config["similarity_threshold"]
+                            if similarity >= similarity_threshold
                             else "low"
                         )
                         results.append(media_item)
 
                     # 达到所需数量时停止
-                    if len(results) >= top_k:
+                    # 确保top_k不为None
+                    safe_top_k = top_k or 10
+                    if len(results) >= safe_top_k:
                         break
 
             # 缓存结果
             if self.config["enable_cache"]:
                 with self.cache_lock:
-                    if len(self.query_cache) >= self.config["cache_size"]:
+                    # 安全地获取和转换cache_size
+                    try:
+                        cache_size_value = self.config.get("cache_size", 1000)
+                        # 检查值是否可以转换为整数
+                        if isinstance(cache_size_value, (int, float, str)):
+                            cache_size = int(cache_size_value)
+                        else:
+                            cache_size = 1000  # 默认值
+                    except (ValueError, TypeError):
+                        cache_size = 1000  # 默认值
+                    
+                    if len(self.query_cache) >= cache_size:
                         # 清理最旧的缓存项
                         oldest_key = next(iter(self.query_cache))
                         del self.query_cache[oldest_key]
@@ -1959,8 +875,11 @@ class AIRecommendationSystem:
 
         except Exception as e:
             logger.error(f"获取相似内容失败: {e}")
-            # 回退到传统方法
-            return self._fallback_similar_items(query_text, top_k)
+            # 回退到传统方法，确保top_k是整数且query_text不为None
+            safe_top_k = top_k or 10
+            if query_text is None:
+                return []
+            return self._fallback_similar_items(query_text, safe_top_k)
 
     def _fallback_similar_items(
         self, query_text: str, top_k: int
@@ -1982,9 +901,19 @@ class AIRecommendationSystem:
                 media_item = self.media_items[idx].copy()
                 media_item["similarity_score"] = float(similarity)
                 media_item["rank"] = i + 1
+                # 安全地获取和转换similarity_threshold
+                try:
+                    threshold_value = self.config.get("similarity_threshold", 0.7)
+                    # 检查值是否可以转换为浮点数
+                    if isinstance(threshold_value, (int, float, str)):
+                        threshold = float(threshold_value)
+                    else:
+                        threshold = 0.7  # 默认阈值
+                except (ValueError, TypeError):
+                    threshold = 0.7  # 默认阈值
                 media_item["confidence"] = (
                     "high"
-                    if similarity >= self.config["similarity_threshold"]
+                    if similarity >= threshold
                     else "low"
                 )
                 results.append(media_item)

@@ -7,10 +7,23 @@ VabHub 统一异常处理模块
 import logging
 import traceback
 from typing import Any, Dict, Optional, Type, Callable, List
-from fastapi import HTTPException, Request, status
-from fastapi.responses import JSONResponse
-from fastapi.exceptions import RequestValidationError
-from pydantic import ValidationError
+
+# Optional imports for fastapi and pydantic
+try:
+    from fastapi import HTTPException, Request, status
+    from fastapi.responses import JSONResponse
+    from fastapi.exceptions import RequestValidationError
+except ImportError:
+    HTTPException = None
+    Request = None
+    status = None
+    JSONResponse = None
+    RequestValidationError = None
+
+try:
+    from pydantic import ValidationError
+except ImportError:
+    ValidationError = None
 
 
 class VabHubException(Exception):
@@ -321,13 +334,24 @@ async def async_safe_execute(
 ):
     """异步安全执行函数"""
     try:
-        return await func
+        # 检查 func 是否已经是一个可等待对象（协程对象）
+        import inspect
+        if inspect.iscoroutinefunction(func):
+            # 如果是协程函数，调用它来获取协程对象
+            return await func()
+        elif inspect.iscoroutine(func):
+            # 如果已经是协程对象，直接 await
+            return await func
+        else:
+            # 如果是普通函数，直接调用
+            return func()
     except Exception as e:
         if exception_types and not any(isinstance(e, t) for t in exception_types):
             raise
 
         if log_error:
             logger = logging.getLogger(__name__)
-            logger.warning(f"异步安全执行失败: {func.__name__} - {e}")
+            logger_name = getattr(func, '__name__', str(func))
+            logger.warning(f"异步安全执行失败: {logger_name} - {e}")
 
         return default_return

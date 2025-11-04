@@ -132,8 +132,14 @@ class DownloadManager:
             logger.error("没有可用的下载器")
             return False
 
+        # 确保传递给客户端的参数类型正确
+        # 使用空字符串作为默认值，避免None值问题
         return await client.add_torrent(
-            torrent=torrent, save_path=save_path, category=category, tags=tags, **kwargs
+            torrent=torrent, 
+            save_path=save_path or "", 
+            category=category or "", 
+            tags=tags or [], 
+            **kwargs
         )
 
     async def pause_torrent(
@@ -264,11 +270,13 @@ class DownloadManager:
             for cid, client in self._clients.items():
                 info = await client.get_transfer_info()
                 if info:
-                    total_info["total_download_speed"] += info.get("dl_info_speed", 0)
-                    total_info["total_upload_speed"] += info.get("up_info_speed", 0)
-                    total_info["total_downloaded"] += info.get("dl_info_data", 0)
-                    total_info["total_uploaded"] += info.get("up_info_data", 0)
-                    total_info["clients"][cid] = info
+                    # 安全地更新统计信息
+                    if isinstance(info, dict):
+                        total_info["total_download_speed"] += info.get("dl_info_speed", 0)
+                        total_info["total_upload_speed"] += info.get("up_info_speed", 0)
+                        total_info["total_downloaded"] += info.get("dl_info_data", 0)
+                        total_info["total_uploaded"] += info.get("up_info_data", 0)
+                        total_info["clients"][cid] = info
 
             return total_info
 

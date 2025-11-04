@@ -29,7 +29,7 @@ class NotificationMessage(BaseModel):
     title: str
     message: str
     type: str = NotificationType.INFO
-    timestamp: datetime = None
+    timestamp: datetime = datetime.now()
     metadata: Dict[str, Any] = {}
 
     def __init__(self, **data):
@@ -403,7 +403,7 @@ async def send_success_notification(
     manager: NotificationManager,
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ):
     """发送成功通知"""
     msg = NotificationMessage(
@@ -419,7 +419,7 @@ async def send_error_notification(
     manager: NotificationManager,
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ):
     """发送错误通知"""
     msg = NotificationMessage(
@@ -435,7 +435,7 @@ async def send_warning_notification(
     manager: NotificationManager,
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ):
     """发送警告通知"""
     msg = NotificationMessage(
@@ -451,7 +451,7 @@ async def send_info_notification(
     manager: NotificationManager,
     title: str,
     message: str,
-    metadata: Dict[str, Any] = None,
+    metadata: Optional[Dict[str, Any]] = None,
 ):
     """发送信息通知"""
     msg = NotificationMessage(

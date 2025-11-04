@@ -63,16 +63,18 @@ async def get_site_bundle(bundle_id: str):
 async def create_site_bundle(bundle_data: SiteBundleCreate):
     """创建新站点包"""
     try:
-        bundle = SiteBundle(
-            id=f"bundle_{len(site_bundle_manager.bundles) + 1}",
+        # 将description, site_overrides, version放入meta字典
+        meta_data = {
+            "description": bundle_data.description,
+            "site_overrides": bundle_data.site_overrides,
+            "version": bundle_data.version
+        }
+        
+        result = site_bundle_manager.create_bundle(
             name=bundle_data.name,
-            description=bundle_data.description,
             selectors=bundle_data.selectors,
-            site_overrides=bundle_data.site_overrides,
-            version=bundle_data.version,
+            meta=meta_data
         )
-
-        result = site_bundle_manager.create_bundle(bundle)
         return {"message": "站点包创建成功", "bundle": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"创建站点包失败: {str(e)}")
@@ -86,9 +88,34 @@ async def update_site_bundle(bundle_id: str, bundle_data: SiteBundleUpdate):
         if not existing_bundle:
             raise HTTPException(status_code=404, detail="站点包不存在")
 
-        # 更新字段
+        # 准备更新数据
+        name = None
+        selectors = None
+        meta = None
+        
         update_data = bundle_data.dict(exclude_unset=True)
-        result = site_bundle_manager.update_bundle(bundle_id, update_data)
+        
+        if "name" in update_data:
+            name = update_data["name"]
+        if "selectors" in update_data:
+            selectors = update_data["selectors"]
+        
+        # 如果有需要更新的meta字段
+        meta_fields = ["description", "site_overrides", "version"]
+        if any(field in update_data for field in meta_fields):
+            # 获取现有meta数据
+            meta = getattr(existing_bundle, 'meta', {}).copy()
+            # 更新meta字段
+            for field in meta_fields:
+                if field in update_data:
+                    meta[field] = update_data[field]
+        
+        result = site_bundle_manager.update_bundle(
+            bundle_id, 
+            name=name,
+            selectors=selectors,
+            meta=meta
+        )
 
         return {"message": "站点包更新成功", "bundle": result}
     except HTTPException:
@@ -127,17 +154,20 @@ async def import_site_bundle(file_content: str):
         if not isinstance(config, dict) or "name" not in config:
             raise HTTPException(status_code=400, detail="无效的站点包格式")
 
+        # 将description, site_overrides, version放入meta字典
+        meta_data = {
+            "description": config.get("description"),
+            "site_overrides": config.get("site_overrides", {}),
+            "version": config.get("version", "1.0.0")
+        }
+        
         # 创建站点包
-        bundle = SiteBundle(
-            id=f"imported_{len(site_bundle_manager.bundles) + 1}",
+        result = site_bundle_manager.create_bundle(
             name=config.get("name", "Imported Bundle"),
-            description=config.get("description"),
             selectors=config.get("selectors", []),
-            site_overrides=config.get("site_overrides", {}),
-            version=config.get("version", "1.0.0"),
+            meta=meta_data
         )
 
-        result = site_bundle_manager.create_bundle(bundle)
         return {"message": "站点包导入成功", "bundle": result}
     except HTTPException:
         raise
@@ -153,13 +183,16 @@ async def export_site_bundle(bundle_id: str):
         if not bundle:
             raise HTTPException(status_code=404, detail="站点包不存在")
 
+        # 从meta字典中获取相关信息
+        meta = getattr(bundle, 'meta', {})
+        
         # 转换为YAML格式
         export_data = {
             "name": bundle.name,
-            "description": bundle.description,
+            "description": meta.get("description"),
             "selectors": bundle.selectors,
-            "site_overrides": bundle.site_overrides,
-            "version": bundle.version,
+            "site_overrides": meta.get("site_overrides", {}),
+            "version": meta.get("version", "1.0.0"),
         }
 
         yaml_content = yaml.dump(

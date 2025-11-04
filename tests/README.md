@@ -143,7 +143,7 @@ open htmlcov/index.html
 
 ### 测试矩阵
 
-- Python版本：3.8, 3.9, 3.10
+- Python版本：3.9, 3.10, 3.11
 - Redis服务：7-alpine
 - 操作系统：Ubuntu最新版
 
