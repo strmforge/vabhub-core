@@ -10,29 +10,39 @@ import numpy as np  # type: ignore
 import json
 import time
 from datetime import datetime
+
 # 这些导入已经在上面的代码块中定义
 
 # 尝试导入sentence-transformers，如果失败则设置为None
 # 预定义SentenceTransformer类型
 try:
     from typing import Any
+
     SentenceTransformer: Any = None
     # 添加兼容性处理
     import torch  # type: ignore
+
     # 安全地处理PyTorch版本兼容性
     try:
-        # 尝试访问可能存在的属性
-        if not hasattr(torch.utils._pytree, '_register_pytree_node'):
-            pass  # 如果不存在，我们不尝试赋值
+        # 应用PyTorch兼容性补丁
+        if hasattr(torch.utils._pytree, "_register_pytree_node") and not hasattr(
+            torch.utils._pytree, "register_pytree_node"
+        ):
+            # 创建兼容性别名
+            torch.utils._pytree.register_pytree_node = (
+                torch.utils._pytree._register_pytree_node
+            )
     except AttributeError:
         pass  # 忽略任何属性错误
     from sentence_transformers import SentenceTransformer
+
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
 
 try:
     import faiss  # type: ignore
+
     FAISS_AVAILABLE = True
 except ImportError:
     faiss = None  # type: ignore
@@ -40,6 +50,7 @@ except ImportError:
 
 try:
     from sklearn.metrics.pairwise import cosine_similarity  # type: ignore
+
     COSINE_SIMILARITY_AVAILABLE = True
 except ImportError:
     cosine_similarity = None  # type: ignore
@@ -89,12 +100,13 @@ class AIRecommendationSystem:
 
         # 个性化推荐相关
         from collections import defaultdict
+
         self.user_profiles: defaultdict[str, Dict[str, Any]] = defaultdict(dict)
-        self.user_interactions: defaultdict[str, List[Dict[str, Any]]] = defaultdict(list)
+        self.user_interactions: defaultdict[str, List[Dict[str, Any]]] = defaultdict(
+            list
+        )
         self.user_preferences: defaultdict[str, Dict[str, Any]] = defaultdict(dict)
         self._init_user_database()
-
-
 
     def record_user_interaction(
         self,
@@ -197,7 +209,10 @@ class AIRecommendationSystem:
             logger.error(f"更新用户偏好失败: {e}")
 
     def get_personalized_recommendations(
-        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
+        self,
+        user_id: str,
+        query_text: Optional[str] = None,
+        top_k: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -220,7 +235,7 @@ class AIRecommendationSystem:
             default_top_k = int(config_top_k)
         else:
             default_top_k = 10
-        
+
         # 安全处理传入的top_k参数
         if isinstance(top_k, (int, float)) and top_k is not None:
             top_k = int(top_k)
@@ -357,16 +372,6 @@ class AIRecommendationSystem:
             return recommendations
             logger.error(f"更新用户偏好失败: {e}")
 
-
-
-
-
-
-
-
-
-
-
     def _init_user_database(self):
         """初始化用户行为数据库"""
         try:
@@ -423,10 +428,6 @@ class AIRecommendationSystem:
             self.conn = None
             self.cursor = None
 
-
-
-
-
             # 更新分类偏好
             if media_item.get("genres"):
                 for genre in media_item["genres"]:
@@ -459,20 +460,6 @@ class AIRecommendationSystem:
 
         except Exception as e:
             logger.error(f"更新用户偏好失败: {e}")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
             # 更新分类偏好
             if media_item.get("genres"):
@@ -553,14 +540,6 @@ class AIRecommendationSystem:
         except Exception as e:
             logger.error(f"更新偏好权重失败: {e}")
 
-
-
-
-
-
-
-
-
     def initialize(self):
         """初始化模型和索引"""
         try:
@@ -624,6 +603,7 @@ class AIRecommendationSystem:
 
         try:
             import numpy as np
+
             # 定义embedding变量并添加类型注解
             embedding: np.ndarray
             if self.model:
@@ -795,7 +775,7 @@ class AIRecommendationSystem:
             # 确保query_text不为None
             if query_text is None:
                 return []
-            
+
             # 生成查询嵌入
             query_embedding = self.generate_embedding(query_text)
             query_embedding = query_embedding.astype("float32").reshape(1, -1)
@@ -826,19 +806,14 @@ class AIRecommendationSystem:
                             similarity_threshold = 0.7  # 默认阈值
                     except (ValueError, TypeError):
                         similarity_threshold = 0.7  # 默认阈值
-                    
+
                     # 过滤低相似度结果
-                    if (
-                        similarity >= similarity_threshold
-                        or len(results) < top_k
-                    ):
+                    if similarity >= similarity_threshold or len(results) < top_k:
                         media_item = self.media_items[idx].copy()
                         media_item["similarity_score"] = similarity
                         media_item["rank"] = len(results) + 1
                         media_item["confidence"] = (
-                            "high"
-                            if similarity >= similarity_threshold
-                            else "low"
+                            "high" if similarity >= similarity_threshold else "low"
                         )
                         results.append(media_item)
 
@@ -861,7 +836,7 @@ class AIRecommendationSystem:
                             cache_size = 1000  # 默认值
                     except (ValueError, TypeError):
                         cache_size = 1000  # 默认值
-                    
+
                     if len(self.query_cache) >= cache_size:
                         # 清理最旧的缓存项
                         oldest_key = next(iter(self.query_cache))
@@ -911,11 +886,7 @@ class AIRecommendationSystem:
                         threshold = 0.7  # 默认阈值
                 except (ValueError, TypeError):
                     threshold = 0.7  # 默认阈值
-                media_item["confidence"] = (
-                    "high"
-                    if similarity >= threshold
-                    else "low"
-                )
+                media_item["confidence"] = "high" if similarity >= threshold else "low"
                 results.append(media_item)
 
             return results

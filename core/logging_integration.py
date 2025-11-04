@@ -10,6 +10,7 @@ from .websocket_manager import ConnectionManager, LogBroadcaster
 connection_manager = ConnectionManager()
 log_broadcaster = LogBroadcaster(connection_manager)
 
+
 # 定义LogLevel枚举
 class LogLevel:
     DEBUG = "debug"

@@ -67,13 +67,11 @@ async def create_site_bundle(bundle_data: SiteBundleCreate):
         meta_data = {
             "description": bundle_data.description,
             "site_overrides": bundle_data.site_overrides,
-            "version": bundle_data.version
+            "version": bundle_data.version,
         }
-        
+
         result = site_bundle_manager.create_bundle(
-            name=bundle_data.name,
-            selectors=bundle_data.selectors,
-            meta=meta_data
+            name=bundle_data.name, selectors=bundle_data.selectors, meta=meta_data
         )
         return {"message": "站点包创建成功", "bundle": result}
     except Exception as e:
@@ -92,29 +90,26 @@ async def update_site_bundle(bundle_id: str, bundle_data: SiteBundleUpdate):
         name = None
         selectors = None
         meta = None
-        
+
         update_data = bundle_data.dict(exclude_unset=True)
-        
+
         if "name" in update_data:
             name = update_data["name"]
         if "selectors" in update_data:
             selectors = update_data["selectors"]
-        
+
         # 如果有需要更新的meta字段
         meta_fields = ["description", "site_overrides", "version"]
         if any(field in update_data for field in meta_fields):
             # 获取现有meta数据
-            meta = getattr(existing_bundle, 'meta', {}).copy()
+            meta = getattr(existing_bundle, "meta", {}).copy()
             # 更新meta字段
             for field in meta_fields:
                 if field in update_data:
                     meta[field] = update_data[field]
-        
+
         result = site_bundle_manager.update_bundle(
-            bundle_id, 
-            name=name,
-            selectors=selectors,
-            meta=meta
+            bundle_id, name=name, selectors=selectors, meta=meta
         )
 
         return {"message": "站点包更新成功", "bundle": result}
@@ -158,14 +153,14 @@ async def import_site_bundle(file_content: str):
         meta_data = {
             "description": config.get("description"),
             "site_overrides": config.get("site_overrides", {}),
-            "version": config.get("version", "1.0.0")
+            "version": config.get("version", "1.0.0"),
         }
-        
+
         # 创建站点包
         result = site_bundle_manager.create_bundle(
             name=config.get("name", "Imported Bundle"),
             selectors=config.get("selectors", []),
-            meta=meta_data
+            meta=meta_data,
         )
 
         return {"message": "站点包导入成功", "bundle": result}
@@ -184,8 +179,8 @@ async def export_site_bundle(bundle_id: str):
             raise HTTPException(status_code=404, detail="站点包不存在")
 
         # 从meta字典中获取相关信息
-        meta = getattr(bundle, 'meta', {})
-        
+        meta = getattr(bundle, "meta", {})
+
         # 转换为YAML格式
         export_data = {
             "name": bundle.name,

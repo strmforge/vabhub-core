@@ -12,7 +12,21 @@ class DatabaseManager:
 
     def __init__(self, database_url: str):
         self.database_url = database_url
+        # Convert SQLAlchemy URL format to sqlite3 compatible format
+        self.database_path = self._convert_sqlalchemy_url(database_url)
         self._init_database()
+
+    def _convert_sqlalchemy_url(self, database_url: str) -> str:
+        """Convert SQLAlchemy URL to sqlite3 compatible path"""
+        if database_url.startswith("sqlite:///"):
+            # Handle memory database
+            if database_url == "sqlite:///:memory:":
+                return ":memory:"
+            # Extract file path from SQLAlchemy URL
+            # sqlite:///path/to/database.db -> path/to/database.db
+            return database_url.replace("sqlite:///", "")
+        # For other database types, return as-is
+        return database_url
 
     def _init_database(self):
         """Initialize database schema"""
@@ -163,7 +177,7 @@ class DatabaseManager:
     @contextmanager
     def get_connection(self):
         """Get database connection"""
-        conn = sqlite3.connect(self.database_url)
+        conn = sqlite3.connect(self.database_path)
         conn.row_factory = sqlite3.Row
         try:
             yield conn

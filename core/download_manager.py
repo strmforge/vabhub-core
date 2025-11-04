@@ -135,11 +135,11 @@ class DownloadManager:
         # 确保传递给客户端的参数类型正确
         # 使用空字符串作为默认值，避免None值问题
         return await client.add_torrent(
-            torrent=torrent, 
-            save_path=save_path or "", 
-            category=category or "", 
-            tags=tags or [], 
-            **kwargs
+            torrent=torrent,
+            save_path=save_path or "",
+            category=category or "",
+            tags=tags or [],
+            **kwargs,
         )
 
     async def pause_torrent(
@@ -272,7 +272,9 @@ class DownloadManager:
                 if info:
                     # 安全地更新统计信息
                     if isinstance(info, dict):
-                        total_info["total_download_speed"] += info.get("dl_info_speed", 0)
+                        total_info["total_download_speed"] += info.get(
+                            "dl_info_speed", 0
+                        )
                         total_info["total_upload_speed"] += info.get("up_info_speed", 0)
                         total_info["total_downloaded"] += info.get("dl_info_data", 0)
                         total_info["total_uploaded"] += info.get("up_info_data", 0)

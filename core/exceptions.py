@@ -336,6 +336,7 @@ async def async_safe_execute(
     try:
         # 检查 func 是否已经是一个可等待对象（协程对象）
         import inspect
+
         if inspect.iscoroutinefunction(func):
             # 如果是协程函数，调用它来获取协程对象
             return await func()
@@ -351,7 +352,7 @@ async def async_safe_execute(
 
         if log_error:
             logger = logging.getLogger(__name__)
-            logger_name = getattr(func, '__name__', str(func))
+            logger_name = getattr(func, "__name__", str(func))
             logger.warning(f"异步安全执行失败: {logger_name} - {e}")
 
         return default_return

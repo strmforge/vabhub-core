@@ -114,7 +114,7 @@ class EnhancedMediaServerManager:
                     "error": f"Unsupported server type: {server_config.server_type}",
                 }
         except Exception as e:
-              return {"ok": False, "error": str(e)}
+            return {"ok": False, "error": str(e)}
 
     async def _test_plex_connection(
         self, server_config: MediaServerConfig
@@ -310,7 +310,10 @@ class EnhancedMediaServerManager:
             return {"ok": False, "error": str(e)}
 
     async def search_media(
-        self, query: str, media_type: str = "All", server_ids: Optional[List[str]] = None
+        self,
+        query: str,
+        media_type: str = "All",
+        server_ids: Optional[List[str]] = None,
     ) -> List[MediaItem]:
         """在所有服务器中搜索媒体"""
         if server_ids is None:

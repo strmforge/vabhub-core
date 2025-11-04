@@ -200,12 +200,16 @@ class QbittorrentClient(DownloadClient):
 
             # 注意：qbittorrentapi的Client不接受timeout参数
             from qbittorrentapi import Client
-            self._client = cast(Any, Client(
-                host=self.config.host,
-                port=self.config.port,
-                username=self.config.username,
-                password=self.config.password,
-            ))
+
+            self._client = cast(
+                Any,
+                Client(
+                    host=self.config.host,
+                    port=self.config.port,
+                    username=self.config.username,
+                    password=self.config.password,
+                ),
+            )
 
             # 测试连接
             if self._client:
@@ -268,7 +272,8 @@ class QbittorrentClient(DownloadClient):
                 if isinstance(torrent, str):
                     # URL或磁力链接
                     result = await asyncio.get_event_loop().run_in_executor(
-                        None, lambda: self._client.torrents_add(urls=torrent, **add_params)
+                        None,
+                        lambda: self._client.torrents_add(urls=torrent, **add_params),
                     )
                 else:
                     # 种子文件内容

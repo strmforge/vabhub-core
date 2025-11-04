@@ -125,7 +125,7 @@ class AIRecommendationSystem:
         interaction_type: str,
         interaction_value: float = 1.0,
         metadata: Optional[Dict[str, Any]] = None,
-    ): 
+    ):
         """
         记录用户行为交互
 
@@ -306,7 +306,10 @@ class AIRecommendationSystem:
             logger.error(f"更新偏好权重失败: {e}")
 
     def get_personalized_recommendations(
-        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
+        self,
+        user_id: str,
+        query_text: Optional[str] = None,
+        top_k: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -335,7 +338,7 @@ class AIRecommendationSystem:
                     top_k = 10
             else:
                 top_k = 10
-        
+
         # 确保top_k不是None并且是整数
         if top_k is None:
             top_k = 10
@@ -526,7 +529,7 @@ class AIRecommendationSystem:
         interaction_type: str,
         interaction_value: float = 1.0,
         metadata: Optional[Dict[str, Any]] = None,
-    ): 
+    ):
         """
         记录用户行为交互
 
@@ -707,7 +710,10 @@ class AIRecommendationSystem:
             logger.error(f"更新偏好权重失败: {e}")
 
     def get_personalized_recommendations(
-        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
+        self,
+        user_id: str,
+        query_text: Optional[str] = None,
+        top_k: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -736,7 +742,7 @@ class AIRecommendationSystem:
                     top_k = 10
             else:
                 top_k = 10
-        
+
         # 确保top_k不是None并且是整数
         if top_k is None:
             top_k = 10
@@ -983,7 +989,7 @@ class AIRecommendationSystem:
         interaction_type: str,
         interaction_value: float = 1.0,
         metadata: Optional[Dict[str, Any]] = None,
-    ): 
+    ):
         """
         记录用户行为交互
 
@@ -1164,7 +1170,10 @@ class AIRecommendationSystem:
             logger.error(f"更新偏好权重失败: {e}")
 
     def get_personalized_recommendations(
-        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
+        self,
+        user_id: str,
+        query_text: Optional[str] = None,
+        top_k: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -1379,7 +1388,7 @@ class AIRecommendationSystem:
         interaction_type: str,
         interaction_value: float = 1.0,
         metadata: Optional[Dict[str, Any]] = None,
-    ): 
+    ):
         """
         记录用户行为交互
 
@@ -1560,7 +1569,10 @@ class AIRecommendationSystem:
             logger.error(f"更新偏好权重失败: {e}")
 
     def get_personalized_recommendations(
-        self, user_id: str, query_text: Optional[str] = None, top_k: Optional[int] = None
+        self,
+        user_id: str,
+        query_text: Optional[str] = None,
+        top_k: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
         获取个性化推荐
@@ -1578,7 +1590,11 @@ class AIRecommendationSystem:
 
         # 确保top_k是整数
         if top_k is None:
-            top_k = int(self.config["top_k"]) if isinstance(self.config["top_k"], (int, str)) else 10
+            top_k = (
+                int(self.config["top_k"])
+                if isinstance(self.config["top_k"], (int, str))
+                else 10
+            )
         # 确保top_k不是None并且是整数
         safe_top_k = int(top_k) if top_k is not None else 10
 
@@ -1996,10 +2012,9 @@ class AIRecommendationSystem:
                     similarity = float(distance)  # FAISS返回的是距离，需要转换为相似度
 
                     # 过滤低相似度结果
-                    if (
-                        similarity >= float(self.config["similarity_threshold"])
-                        or len(results) < (top_k or 0)
-                    ):
+                    if similarity >= float(self.config["similarity_threshold"]) or len(
+                        results
+                    ) < (top_k or 0):
                         media_item = self.media_items[idx].copy()
                         media_item["similarity_score"] = similarity
                         media_item["rank"] = len(results) + 1

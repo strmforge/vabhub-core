@@ -476,6 +476,7 @@ def create_graphql_app(config: Optional[Config] = None) -> VabHubGraphQLApp:
     """创建GraphQL应用实例"""
     if config is None:
         from .config import get_config
+
         config = get_config()
 
     return VabHubGraphQLApp(config)

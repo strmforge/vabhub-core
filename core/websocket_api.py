@@ -35,7 +35,9 @@ async def websocket_logs_endpoint(websocket: WebSocket):
         connection_manager.disconnect(websocket, "logs")
     except Exception as e:
         # Log any other errors
-        await log_broadcaster.broadcast_log("error", "websocket", f"WebSocket error: {str(e)}")
+        await log_broadcaster.broadcast_log(
+            "error", "websocket", f"WebSocket error: {str(e)}"
+        )
         connection_manager.disconnect(websocket, "logs")
 
 
@@ -60,7 +62,9 @@ async def websocket_notifications_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         connection_manager.disconnect(websocket, "notifications")
     except Exception as e:
-        await log_broadcaster.broadcast_log("error", "websocket", f"WebSocket error: {str(e)}")
+        await log_broadcaster.broadcast_log(
+            "error", "websocket", f"WebSocket error: {str(e)}"
+        )
         connection_manager.disconnect(websocket, "notifications")
 
 
@@ -85,5 +89,7 @@ async def websocket_tasks_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         connection_manager.disconnect(websocket, "tasks")
     except Exception as e:
-        await log_broadcaster.broadcast_log("error", "websocket", f"WebSocket error: {str(e)}")
+        await log_broadcaster.broadcast_log(
+            "error", "websocket", f"WebSocket error: {str(e)}"
+        )
         connection_manager.disconnect(websocket, "tasks")

@@ -130,7 +130,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return False
-                
+
             async with self.session.post(
                 f"{self.base_url}/api/v2/torrents/add", data=data, cookies=self.cookies
             ) as response:
@@ -139,13 +139,15 @@ class QBittorrentIntegration:
             logger.error(f"添加种子失败: {str(e)}")
             return False
 
-    async def get_torrents(self, hashes: Optional[List[str]] = None) -> List[TorrentInfo]:
+    async def get_torrents(
+        self, hashes: Optional[List[str]] = None
+    ) -> List[TorrentInfo]:
         """获取种子列表"""
         try:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return []
-            
+
             params = {}
             if hashes:
                 params["hashes"] = "|".join(hashes)
@@ -191,7 +193,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return False
-            
+
             data = {"hashes": "|".join(hashes), "tags": ",".join(tags)}
 
             async with self.session.post(
@@ -210,7 +212,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return False
-            
+
             data = {"hashes": "|".join(hashes), "category": category}
 
             async with self.session.post(
@@ -229,7 +231,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return False
-            
+
             data = {"hashes": "|".join(hashes), "limit": limit}
 
             async with self.session.post(
@@ -248,7 +250,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return False
-            
+
             data = {"hashes": "|".join(hashes), "limit": limit}
 
             async with self.session.post(
@@ -267,7 +269,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return False
-            
+
             data = {"hashes": "|".join(hashes)}
 
             async with self.session.post(
@@ -286,7 +288,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return False
-            
+
             data = {"hashes": "|".join(hashes)}
 
             async with self.session.post(
@@ -305,7 +307,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return False
-            
+
             data = {
                 "hashes": "|".join(hashes),
                 "deleteFiles": "true" if delete_files else "false",
@@ -327,7 +329,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return {}
-            
+
             async with self.session.get(
                 f"{self.base_url}/api/v2/torrents/categories", cookies=self.cookies
             ) as response:
@@ -346,7 +348,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return []
-            
+
             async with self.session.get(
                 f"{self.base_url}/api/v2/torrents/tags", cookies=self.cookies
             ) as response:
@@ -366,7 +368,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return False
-            
+
             data = {"category": name, "savePath": save_path}
 
             async with self.session.post(
@@ -385,7 +387,7 @@ class QBittorrentIntegration:
             if self.session is None:
                 logger.error("qBittorrent会话未初始化")
                 return {}
-            
+
             async with self.session.get(
                 f"{self.base_url}/api/v2/transfer/info", cookies=self.cookies
             ) as response:

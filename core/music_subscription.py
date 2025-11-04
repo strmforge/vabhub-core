@@ -157,7 +157,11 @@ class MusicSubscriptionManager:
                 "enabled": True,
                 "created_at": datetime.now(),
                 "last_sync": None,
-                "next_sync": datetime.now() + timedelta(hours=24) if subscription_data.get("schedule", "daily") == "daily" else datetime.now() + timedelta(days=7)
+                "next_sync": (
+                    datetime.now() + timedelta(hours=24)
+                    if subscription_data.get("schedule", "daily") == "daily"
+                    else datetime.now() + timedelta(days=7)
+                ),
             }
 
             self.subscriptions[subscription_id] = subscription

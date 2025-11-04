@@ -157,7 +157,9 @@ class Query:
         from .hnr_detector import hnr_detector
 
         # 使用正确的detect方法，确保site_id不为None
-        result = hnr_detector.detect(title=input.content, site_id=input.site_name or "default")
+        result = hnr_detector.detect(
+            title=input.content, site_id=input.site_name or "default"
+        )
         return HNRDetectionResultType.from_model(result)
 
     @strawberry.field(description="获取种子列表")
@@ -180,17 +182,15 @@ class Mutation:
         # 创建meta字典，包含description、site_overrides和version
         meta = {}
         if input.description:
-            meta['description'] = input.description
+            meta["description"] = input.description
         # 确保site_overrides是字符串，而不是字典
         if input.site_overrides:
-            meta['site_overrides'] = str(input.site_overrides)
-        meta['version'] = input.version
+            meta["site_overrides"] = str(input.site_overrides)
+        meta["version"] = input.version
 
         # 使用正确的create_bundle方法签名
         result = site_bundle_manager.create_bundle(
-            name=input.name,
-            selectors=input.selectors,
-            meta=meta
+            name=input.name, selectors=input.selectors, meta=meta
         )
         if not result:
             raise ValueError("创建站点包失败")
@@ -209,20 +209,28 @@ class Mutation:
 
         meta = existing_bundle.meta.copy()
         if input.description is not None:
-            meta['description'] = input.description
+            meta["description"] = input.description
         if input.site_overrides is not None:
-            meta['site_overrides'] = str(input.site_overrides)
+            meta["site_overrides"] = str(input.site_overrides)
         if input.version is not None:
-            meta['version'] = input.version
+            meta["version"] = input.version
 
         # 使用正确的update_bundle方法签名
         result = site_bundle_manager.update_bundle(
             bundle_id=id,
             name=input.name,
             selectors=input.selectors,
-            meta=meta if any([input.description is not None, 
-                              input.site_overrides is not None, 
-                              input.version is not None]) else None
+            meta=(
+                meta
+                if any(
+                    [
+                        input.description is not None,
+                        input.site_overrides is not None,
+                        input.version is not None,
+                    ]
+                )
+                else None
+            ),
         )
         if not result:
             raise ValueError(f"更新站点包 {id} 失败")
