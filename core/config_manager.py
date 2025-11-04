@@ -33,7 +33,7 @@ class DatabaseConfig(BaseSettings):
 class RedisConfig(BaseSettings):
     """Redis配置"""
 
-    url: str = Field(default="redis://localhost:6379", alias="REDIS_URL")
+    url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
     host: str = Field(default="localhost", alias="REDIS_HOST")
     port: int = Field(default=6379, alias="REDIS_PORT")
     db: int = Field(default=0, alias="REDIS_DB")
@@ -46,7 +46,7 @@ class RedisConfig(BaseSettings):
 class CacheConfig(BaseSettings):
     """缓存配置"""
 
-    ttl: int = Field(default=3600, alias="CACHE_TTL")
+    ttl: int = Field(default=300, alias="CACHE_TTL")
     memory_max_size: int = Field(default=1000, alias="CACHE_MEMORY_MAX_SIZE")
     memory_policy: str = Field(default="lru", alias="CACHE_MEMORY_POLICY")
     disk_max_size: int = Field(default=10000, alias="CACHE_DISK_MAX_SIZE")
