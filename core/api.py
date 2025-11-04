@@ -616,7 +616,7 @@ app = api.get_app()
 
 class APIServer:
     """API Server class for testing purposes"""
-    
+
     def __init__(self, config: Optional[Config] = None):
         self.config = config or Config()
         self.api = VabHubAPI(self.config)
