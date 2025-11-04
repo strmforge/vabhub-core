@@ -17,8 +17,12 @@ class STRMGatewayManager:
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.base_path = config.get("strm_base_path", "/srv/media/strm")
-        self.library_path = config.get("library_path", "/srv/media/library")
+        self.base_path = config.get(
+            "strm_base_path", os.environ.get("STRM_BASE_PATH", "/srv/media/strm")
+        )
+        self.library_path = config.get(
+            "library_path", os.environ.get("LIBRARY_PATH", "/srv/media/library")
+        )
         self.gateway_url = config.get("gateway_url", "http://localhost:8000")
 
         # Create base directories

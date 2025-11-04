@@ -21,6 +21,7 @@ else:
     except ImportError:
         HTTPException = type("HTTPException", (), {})
         Request = type("Request", (), {})
+
         class MockStatus:
             HTTP_500_INTERNAL_SERVER_ERROR = 500
             HTTP_401_UNAUTHORIZED = 401
@@ -30,6 +31,7 @@ else:
             HTTP_429_TOO_MANY_REQUESTS = 429
             HTTP_502_BAD_GATEWAY = 502
             HTTP_503_SERVICE_UNAVAILABLE = 503
+
         status = MockStatus()
         JSONResponse = type("JSONResponse", (), {})
         RequestValidationError = type("RequestValidationError", (), {})
@@ -286,7 +288,11 @@ def exception_handler(request: "Request", exc: Exception) -> "JSONResponse":
         )
 
         # 生产环境下隐藏详细错误信息
-        if hasattr(request, 'app') and hasattr(request.app, 'debug') and request.app.debug:
+        if (
+            hasattr(request, "app")
+            and hasattr(request.app, "debug")
+            and request.app.debug
+        ):
             details = {"traceback": traceback.format_exc()}
         else:
             details = {}
@@ -301,7 +307,7 @@ def exception_handler(request: "Request", exc: Exception) -> "JSONResponse":
                     "details": details,
                 },
             )
-    
+
     # 默认返回
     default_response = {
         "error": True,
@@ -309,7 +315,7 @@ def exception_handler(request: "Request", exc: Exception) -> "JSONResponse":
         "message": "服务器内部错误",
         "details": {},
     }
-    
+
     if hasattr(JSONResponse, "__call__"):
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -322,7 +328,7 @@ def exception_handler(request: "Request", exc: Exception) -> "JSONResponse":
             def __init__(self, status_code, content):
                 self.status_code = status_code
                 self.content = content
-        
+
         # 尽管类型不匹配，但在运行时这不会造成问题
         # 因为这种情况只在缺少fastapi依赖时发生
         return MockJSONResponse(status.HTTP_500_INTERNAL_SERVER_ERROR, default_response)  # type: ignore

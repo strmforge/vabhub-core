@@ -4,11 +4,11 @@
 
 import os
 from typing import Any, Dict, Optional
-from pydantic import BaseSettings, validator
+from pydantic import BaseSettings, validator  # type: ignore
 from pathlib import Path
 
 
-class DatabaseConfig(BaseSettings):
+class DatabaseConfig(BaseSettings):  # type: ignore
     """数据库配置"""
     url: str = "postgresql://vabhub:password@localhost:5432/vabhub"
     pool_size: int = 20
@@ -19,7 +19,7 @@ class DatabaseConfig(BaseSettings):
         env_prefix = "DB_"
 
 
-class CacheConfig(BaseSettings):
+class CacheConfig(BaseSettings):  # type: ignore
     """缓存配置"""
     redis_url: str = "redis://localhost:6379"
     redis_prefix: str = "vabhub:"
@@ -31,7 +31,7 @@ class CacheConfig(BaseSettings):
         env_prefix = "CACHE_"
 
 
-class AuthConfig(BaseSettings):
+class AuthConfig(BaseSettings):  # type: ignore
     """认证配置"""
     secret_key: str = "your-secret-key-change-in-production"
     algorithm: str = "HS256"
@@ -41,10 +41,10 @@ class AuthConfig(BaseSettings):
         env_prefix = "AUTH_"
 
 
-class MediaConfig(BaseSettings):
+class MediaConfig(BaseSettings):  # type: ignore
     """媒体配置"""
-    library_path: str = "/srv/media/library"
-    temp_path: str = "/tmp/vabhub"
+    library_path: str = os.environ.get("MEDIA_LIBRARY_PATH", "/srv/media/library")
+    temp_path: str = os.environ.get("MEDIA_TEMP_PATH", "/tmp/vabhub")
     supported_formats: list = ["mp4", "mkv", "avi", "mov"]
     max_file_size: int = 1024 * 1024 * 1024  # 1GB
     
@@ -52,7 +52,7 @@ class MediaConfig(BaseSettings):
         env_prefix = "MEDIA_"
 
 
-class PluginConfig(BaseSettings):
+class PluginConfig(BaseSettings):  # type: ignore
     """插件配置"""
     plugin_dir: str = "plugins"
     auto_discover: bool = True
@@ -62,7 +62,7 @@ class PluginConfig(BaseSettings):
         env_prefix = "PLUGIN_"
 
 
-class LoggingConfig(BaseSettings):
+class LoggingConfig(BaseSettings):  # type: ignore
     """日志配置"""
     level: str = "INFO"
     format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -74,7 +74,7 @@ class LoggingConfig(BaseSettings):
         env_prefix = "LOG_"
 
 
-class Config(BaseSettings):
+class Config(BaseSettings):  # type: ignore
     """主配置类"""
     
     # 基础配置

@@ -1,11 +1,18 @@
 """
-简化的集成测试文件 - 修复版本
+简单集成测试 - 测试基本功能
 """
 
 import pytest
+import os
 from fastapi.testclient import TestClient
 
-from core.api import VabHubAPI
+# 设置测试环境变量
+os.environ["MEDIA_LIBRARY_PATH"] = "/tmp/media/library"
+os.environ["MEDIA_TEMP_PATH"] = "/tmp/media/temp"
+os.environ["STRM_BASE_PATH"] = "/tmp/media/strm"
+os.environ["LIBRARY_PATH"] = "/tmp/media/library"
+
+from core.api import app, VabHubAPI
 from core.config import Config
 
 

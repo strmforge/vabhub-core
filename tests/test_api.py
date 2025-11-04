@@ -1,7 +1,14 @@
 import pytest
 import json
+import os
 from fastapi.testclient import TestClient
 from unittest.mock import patch, AsyncMock
+
+# 设置测试环境变量
+os.environ["MEDIA_LIBRARY_PATH"] = "/tmp/media/library"
+os.environ["MEDIA_TEMP_PATH"] = "/tmp/media/temp"
+os.environ["STRM_BASE_PATH"] = "/tmp/media/strm"
+os.environ["LIBRARY_PATH"] = "/tmp/media/library"
 
 from core.api import app
 

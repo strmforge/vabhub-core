@@ -3,6 +3,7 @@ API module for VabHub Core
 """
 
 import logging
+import os
 from typing import Optional, Any, Dict, List
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
@@ -28,7 +29,7 @@ from .ai_recommendation_api import router as ai_recommendation_router
 from .api_subscription import router as subscription_router
 from .api_file_organizer import router as file_organizer_router
 
-# # # # from .graphql_api import GraphQLAPI  # GraphQLAPI 暂时未实现  # GraphQLAPI 暂时未实现  # GraphQLAPI 暂时未实现  # GraphQLAPI 暂时未实现
+# from .graphql_api import GraphQLAPI  # GraphQLAPI 暂时未实现
 from .exceptions import exception_handler
 from .logging_config import get_logger
 
@@ -419,9 +420,14 @@ class VabHubAPI:
         async def storage_status():
             return StorageStatus(local=True, strm=False, cloud=[])
 
-        @self.app.get("/api/storage/config")
-        async def storage_conf_get():
-            return {"local": {"library": "/srv/media/library"}, "cloud": {}}
+        @self.app.get("/storage")
+        async def get_storage_status():
+            return {
+                "local": {
+                    "library": os.environ.get("LIBRARY_PATH", "/srv/media/library")
+                },
+                "cloud": {},
+            }
 
         @self.app.put("/api/storage/config")
         async def storage_conf_put(conf: Dict[str, Any]):
