@@ -9,7 +9,7 @@ import yaml  # type: ignore
 import json
 from typing import Dict, Any, Optional, List
 from pathlib import Path
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings
 import logging
 
@@ -17,15 +17,15 @@ import logging
 class DatabaseConfig(BaseSettings):
     """数据库配置"""
 
-    url: str = Field(default="sqlite:///vabhub.db", env="DATABASE_URL")
-    host: str = Field(default="localhost", env="DATABASE_HOST")
-    port: int = Field(default=5432, env="DATABASE_PORT")
-    name: str = Field(default="vabhub", env="DATABASE_NAME")
-    user: str = Field(default="vabhub", env="DATABASE_USER")
-    password: str = Field(default="", env="DATABASE_PASSWORD")
-    pool_size: int = Field(default=10, env="DATABASE_POOL_SIZE")
-    max_overflow: int = Field(default=20, env="DATABASE_MAX_OVERFLOW")
-    echo: bool = Field(default=False, env="DATABASE_ECHO")
+    url: str = Field(default="sqlite:///vabhub.db", alias="DATABASE_URL")
+    host: str = Field(default="localhost", alias="DATABASE_HOST")
+    port: int = Field(default=5432, alias="DATABASE_PORT")
+    name: str = Field(default="vabhub", alias="DATABASE_NAME")
+    user: str = Field(default="vabhub", alias="DATABASE_USER")
+    password: str = Field(default="", alias="DATABASE_PASSWORD")
+    pool_size: int = Field(default=10, alias="DATABASE_POOL_SIZE")
+    max_overflow: int = Field(default=20, alias="DATABASE_MAX_OVERFLOW")
+    echo: bool = Field(default=False, alias="DATABASE_ECHO")
 
     model_config = {"env_prefix": "DATABASE_"}
 
@@ -33,13 +33,12 @@ class DatabaseConfig(BaseSettings):
 class RedisConfig(BaseSettings):
     """Redis配置"""
 
-    url: str = Field(default="redis://localhost:6379", env="REDIS_URL")
-    host: str = Field(default="localhost", env="REDIS_HOST")
-    port: int = Field(default=6379, env="REDIS_PORT")
-    password: str = Field(default="", env="REDIS_PASSWORD")
-    db: int = Field(default=0, env="REDIS_DB")
-    max_connections: int = Field(default=10, env="REDIS_MAX_CONNECTIONS")
-    prefix: str = Field(default="vabhub:", env="REDIS_PREFIX")
+    url: str = Field(default="redis://localhost:6379", alias="REDIS_URL")
+    host: str = Field(default="localhost", alias="REDIS_HOST")
+    port: int = Field(default=6379, alias="REDIS_PORT")
+    db: int = Field(default=0, alias="REDIS_DB")
+    password: Optional[str] = Field(default=None, alias="REDIS_PASSWORD")
+    max_connections: int = Field(default=10, alias="REDIS_MAX_CONNECTIONS")
 
     model_config = {"env_prefix": "REDIS_"}
 
@@ -47,13 +46,13 @@ class RedisConfig(BaseSettings):
 class CacheConfig(BaseSettings):
     """缓存配置"""
 
-    ttl: int = Field(default=3600, env="CACHE_TTL")
-    memory_max_size: int = Field(default=1000, env="CACHE_MEMORY_MAX_SIZE")
-    memory_policy: str = Field(default="lru", env="CACHE_MEMORY_POLICY")
-    disk_max_size: int = Field(default=10000, env="CACHE_DISK_MAX_SIZE")
-    disk_directory: str = Field(default=".cache", env="CACHE_DISK_DIRECTORY")
-    redis_prefix: str = Field(default="vabhub:", env="CACHE_REDIS_PREFIX")
-    redis_max_connections: int = Field(default=10, env="CACHE_REDIS_MAX_CONNECTIONS")
+    ttl: int = Field(default=3600, alias="CACHE_TTL")
+    memory_max_size: int = Field(default=1000, alias="CACHE_MEMORY_MAX_SIZE")
+    memory_policy: str = Field(default="lru", alias="CACHE_MEMORY_POLICY")
+    disk_max_size: int = Field(default=10000, alias="CACHE_DISK_MAX_SIZE")
+    disk_directory: str = Field(default=".cache", alias="CACHE_DISK_DIRECTORY")
+    redis_prefix: str = Field(default="vabhub:", alias="CACHE_REDIS_PREFIX")
+    redis_max_connections: int = Field(default=10, alias="CACHE_REDIS_MAX_CONNECTIONS")
 
     model_config = {"env_prefix": "CACHE_"}
 
@@ -68,8 +67,7 @@ class ServerConfig(BaseSettings):
     access_log: bool = True
     cors_origins: List[str] = ["*"]
 
-    class Config:
-        env_prefix = "SERVER_"
+    model_config = {"env_prefix": "SERVER_"}
 
 
 class LoggingConfig(BaseSettings):
@@ -81,8 +79,7 @@ class LoggingConfig(BaseSettings):
     max_size: int = 10485760  # 10MB
     backup_count: int = 5
 
-    class Config:
-        env_prefix = "LOG_"
+    model_config = {"env_prefix": "LOG_"}
 
 
 class APIConfig(BaseSettings):
@@ -98,8 +95,7 @@ class APIConfig(BaseSettings):
     y115_client_secret: str = ""
     y115_refresh_token: str = ""
 
-    class Config:
-        env_prefix = ""
+    model_config = {"env_prefix": ""}
 
 
 class PluginConfig(BaseSettings):
@@ -118,8 +114,7 @@ class PluginConfig(BaseSettings):
     auto_discover: bool = True
     hot_reload: bool = False
 
-    class Config:
-        env_prefix = "PLUGIN_"
+    model_config = {"env_prefix": "PLUGIN_"}
 
 
 class PerformanceConfig(BaseSettings):
@@ -131,8 +126,7 @@ class PerformanceConfig(BaseSettings):
     rate_limit: int = 100
     batch_size: int = 50
 
-    class Config:
-        env_prefix = "PERFORMANCE_"
+    model_config = {"env_prefix": "PERFORMANCE_"}
 
 
 class VabHubConfig(BaseSettings):

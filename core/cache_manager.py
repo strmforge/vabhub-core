@@ -86,6 +86,43 @@ class CacheBackend(ABC):
         """获取匹配模式的键"""
         pass
 
+    async def batch_get(self, keys: List[str]) -> Dict[str, Any]:
+        """批量获取缓存值"""
+        result = {}
+        for key in keys:
+            value = await self.get(key)
+            if value is not None:
+                result[key] = value
+        return result
+
+    async def batch_set(self, items: Dict[str, Any], ttl: Optional[int] = None) -> bool:
+        """批量设置缓存值"""
+        results = []
+        for key, value in items.items():
+            success = await self.set(key, value, ttl)
+            results.append(success)
+        return all(results)
+
+    async def batch_delete(self, keys: List[str]) -> bool:
+        """批量删除缓存值"""
+        results = []
+        for key in keys:
+            success = await self.delete(key)
+            results.append(success)
+        return all(results)
+
+    async def health_check(self) -> Dict[str, Any]:
+        """健康检查"""
+        return {"status": "unknown"}
+
+    async def get_memory_usage(self) -> Dict[str, Any]:
+        """获取内存使用情况"""
+        return {}
+
+    async def close(self) -> None:
+        """关闭连接"""
+        pass
+
 
 class MemoryCacheBackend(CacheBackend):
     """内存缓存后端"""
@@ -357,10 +394,10 @@ class RedisCacheBackend(CacheBackend):
         """健康检查"""
         try:
             # 检查连接状态
-            ping_result = await self.redis.ping()
+            ping_result = await self.redis.ping()  # type: ignore
 
             # 获取Redis信息
-            info = await self.redis.info()
+            info = await self.redis.info()  # type: ignore
 
             # 检查连接池状态
             pool_info = {
@@ -383,8 +420,8 @@ class RedisCacheBackend(CacheBackend):
     async def close(self):
         """关闭Redis连接"""
         try:
-            await self.redis.close()
-            self.redis_pool.disconnect()
+            await self.redis.close()  # type: ignore
+            self.redis_pool.disconnect()  # type: ignore
         except Exception as e:
             self.logger.error(f"Failed to close Redis connection: {e}")
 
@@ -739,180 +776,13 @@ class CacheManager:
 
                     health_status[cache_level.value] = {
                         "status": "healthy" if value == "test" else "unhealthy",
-                        "last_check": time.time(),
+                        "last_check": str(time.time()),
                     }
                 except Exception as e:
                     health_status[cache_level.value] = {
                         "status": "unhealthy",
                         "error": str(e),
-                        "last_check": time.time(),
-                    }
-
-        return health_status
-
-    async def get_memory_usage(
-        self, level: Optional[CacheLevel] = None
-    ) -> Dict[str, Any]:
-        """获取内存使用情况"""
-        levels_to_check = [level] if level else self.enabled_levels
-
-        memory_usage = {}
-
-        for cache_level in levels_to_check:
-            if cache_level not in self.backends:
-                continue
-
-            backend = self.backends[cache_level]
-
-            if hasattr(backend, "get_memory_usage"):
-                memory_usage[cache_level.value] = await backend.get_memory_usage()
-            else:
-                # 基本内存使用统计
-                stats = self.stats.get(cache_level, CacheStats())
-                memory_usage[cache_level.value] = {
-                    "size": stats.size,
-                    "max_size": stats.max_size,
-                    "hit_rate": stats.hit_rate,
-                }
-
-        return memory_usage
-
-    async def close(self):
-        """关闭所有缓存后端"""
-        for backend in self.backends.values():
-            if hasattr(backend, "close"):
-                await backend.close()
-        """批量获取缓存值"""
-        levels_to_check = [level] if level else self.enabled_levels
-
-        for cache_level in levels_to_check:
-            if cache_level not in self.backends:
-                continue
-
-            backend = self.backends[cache_level]
-            if hasattr(backend, "batch_get"):
-                result = await backend.batch_get(keys)
-                if result:
-                    # 更新统计信息
-                    for key in keys:
-                        if key in result:
-                            self.stats[cache_level].hits += 1
-                        else:
-                            self.stats[cache_level].misses += 1
-                    self._update_hit_rate(cache_level)
-                    return result
-
-        # 如果没有批量操作支持，回退到单个获取
-        result = {}
-        for key in keys:
-            value = await self.get(key, level)
-            if value is not None:
-                result[key] = value
-
-        return result
-
-    async def batch_set(
-        self,
-        items: Dict[str, Any],
-        ttl: Optional[int] = None,
-        level: Optional[CacheLevel] = None,
-    ) -> bool:
-        """批量设置缓存值"""
-        if ttl is None:
-            ttl = self.default_ttl
-
-        levels_to_set = [level] if level else self.enabled_levels
-        results = []
-
-        for cache_level in levels_to_set:
-            if cache_level not in self.backends:
-                continue
-
-            backend = self.backends[cache_level]
-            if hasattr(backend, "batch_set"):
-                success = await backend.batch_set(items, ttl)
-                results.append(success)
-
-                if success:
-                    self.stats[cache_level].size += len(items)
-            else:
-                # 如果没有批量操作支持，回退到单个设置
-                for key, value in items.items():
-                    success = await backend.set(key, value, ttl)
-                    if success:
-                        self.stats[cache_level].size += 1
-                results.append(True)
-
-        return any(results)
-
-    async def batch_delete(
-        self, keys: List[str], level: Optional[CacheLevel] = None
-    ) -> bool:
-        """批量删除缓存值"""
-        levels_to_delete = [level] if level else self.enabled_levels
-        results = []
-
-        for cache_level in levels_to_delete:
-            if cache_level not in self.backends:
-                continue
-
-            backend = self.backends[cache_level]
-            if hasattr(backend, "batch_delete"):
-                success = await backend.batch_delete(keys)
-                results.append(success)
-
-                if success:
-                    self.stats[cache_level].size = max(
-                        0, self.stats[cache_level].size - len(keys)
-                    )
-            else:
-                # 如果没有批量操作支持，回退到单个删除
-                for key in keys:
-                    success = await backend.delete(key)
-                    if success:
-                        self.stats[cache_level].size = max(
-                            0, self.stats[cache_level].size - 1
-                        )
-                results.append(True)
-
-        return any(results)
-
-    async def health_check(self, level: Optional[CacheLevel] = None) -> Dict[str, Any]:
-        """健康检查"""
-        levels_to_check = [level] if level else self.enabled_levels
-
-        health_status = {}
-
-        for cache_level in levels_to_check:
-            if cache_level not in self.backends:
-                health_status[cache_level.value] = {
-                    "status": "not_configured",
-                    "error": f"Backend for {cache_level.value} not configured",
-                }
-                continue
-
-            backend = self.backends[cache_level]
-
-            if hasattr(backend, "health_check"):
-                health_status[cache_level.value] = await backend.health_check()
-            else:
-                # 基本健康检查
-                try:
-                    # 尝试简单的操作来检查健康状态
-                    test_key = f"health_check_{int(time.time())}"
-                    await backend.set(test_key, "test", 10)
-                    value = await backend.get(test_key)
-                    await backend.delete(test_key)
-
-                    health_status[cache_level.value] = {
-                        "status": "healthy" if value == "test" else "unhealthy",
-                        "last_check": time.time(),
-                    }
-                except Exception as e:
-                    health_status[cache_level.value] = {
-                        "status": "unhealthy",
-                        "error": str(e),
-                        "last_check": time.time(),
+                        "last_check": str(time.time()),
                     }
 
         return health_status

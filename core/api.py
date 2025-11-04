@@ -78,7 +78,7 @@ class DownloaderInstance(BaseModel):
 class StorageStatus(BaseModel):
     local: bool = True
     strm: bool = False
-    cloud: list[str] = []
+    cloud: List[str] = []
 
 
 class STRMEmitRequest(BaseModel):

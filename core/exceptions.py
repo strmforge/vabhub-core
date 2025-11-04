@@ -6,23 +6,21 @@ VabHub 统一异常处理模块
 
 import logging
 import traceback
-from typing import Any, Dict, Optional, Type, Callable, List
+from typing import Any, Dict, Optional, Type, Callable, List, TYPE_CHECKING
 
 # Optional imports for fastapi and pydantic
-try:
+if TYPE_CHECKING:
     from fastapi import HTTPException, Request, status
     from fastapi.responses import JSONResponse
     from fastapi.exceptions import RequestValidationError
-except ImportError:
+    from pydantic import ValidationError
+else:
+    # 在运行时提供替代实现
     HTTPException = None
     Request = None
     status = None
     JSONResponse = None
     RequestValidationError = None
-
-try:
-    from pydantic import ValidationError
-except ImportError:
     ValidationError = None
 
 

@@ -6,23 +6,13 @@ VabHub 统一异常处理模块
 
 import logging
 import traceback
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, Optional, Callable, TYPE_CHECKING
 
-# Optional imports for fastapi and starlette
-try:
-    from fastapi import FastAPI, Request, HTTPException, RequestValidationError
+if TYPE_CHECKING:
+    from fastapi import FastAPI, Request, HTTPException
+    from fastapi.exceptions import RequestValidationError
     from fastapi.responses import JSONResponse
-except ImportError:
-    FastAPI = None
-    Request = None
-    HTTPException = None
-    RequestValidationError = None
-    JSONResponse = None
-
-try:
-    from starlette import HTTPException as StarletteHTTPException
-except ImportError:
-    StarletteHTTPException = None
+    from starlette.exceptions import HTTPException as StarletteHTTPException
 
 
 class VabHubError(Exception):
@@ -142,7 +132,7 @@ class PluginError(VabHubError):
 class ExceptionHandler:
     """异常处理器"""
 
-    def __init__(self, app: FastAPI, debug: bool = False):
+    def __init__(self, app: "FastAPI", debug: bool = False):
         self.app = app
         self.debug = debug
         self.logger = logging.getLogger(__name__)
@@ -154,7 +144,7 @@ class ExceptionHandler:
         """注册异常处理器"""
 
         @self.app.exception_handler(VabHubError)
-        async def vabhub_error_handler(request: Request, exc: VabHubError):
+        async def vabhub_error_handler(request: "Request", exc: VabHubError):
             """处理 VabHub 自定义异常"""
             self.logger.error(
                 f"VabHubError: {exc.code} - {exc.message}",
@@ -168,7 +158,7 @@ class ExceptionHandler:
             return JSONResponse(status_code=exc.status_code, content=exc.to_dict())
 
         @self.app.exception_handler(HTTPException)
-        async def http_exception_handler(request: Request, exc: HTTPException):
+        async def http_exception_handler(request: "Request", exc: "HTTPException"):
             """处理 HTTP 异常"""
             self.logger.warning(
                 f"HTTPException: {exc.status_code} - {exc.detail}",
@@ -188,7 +178,7 @@ class ExceptionHandler:
 
         @self.app.exception_handler(RequestValidationError)
         async def validation_exception_handler(
-            request: Request, exc: RequestValidationError
+            request: "Request", exc: "RequestValidationError"
         ):
             """处理请求验证错误"""
             self.logger.warning(
@@ -213,7 +203,7 @@ class ExceptionHandler:
             )
 
         @self.app.exception_handler(Exception)
-        async def general_exception_handler(request: Request, exc: Exception):
+        async def general_exception_handler(request: "Request", exc: Exception):
             """处理通用异常"""
             # 记录详细错误信息
             error_info = {
@@ -255,11 +245,11 @@ class ExceptionHandler:
         """添加自定义异常处理器"""
 
         @self.app.exception_handler(exception_type)
-        async def custom_handler(request: Request, exc: Exception):
+        async def custom_handler(request: "Request", exc: Exception):
             return await handler(request, exc)
 
 
-def setup_exception_handlers(app: FastAPI, debug: bool = False):
+def setup_exception_handlers(app: "FastAPI", debug: bool = False):
     """设置异常处理器"""
     ExceptionHandler(app, debug)
 

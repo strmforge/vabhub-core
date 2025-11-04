@@ -181,11 +181,11 @@ class MusicPlatformAdapter(abc.ABC):
         self, artist_id: str, limit: int = 50
     ) -> List[Dict[str, Any]]:
         """获取艺术家的热门歌曲"""
-        raise NotImplementedError("子类必须实现get_artist_tracks方法")
+        pass
 
     async def get_album_tracks(self, album_id: str) -> List[Dict[str, Any]]:
         """获取专辑中的歌曲"""
-        pass
+        raise NotImplementedError("子类必须实现get_album_tracks方法")
 
     @abc.abstractmethod
     async def get_track_details(self, track_id: str) -> Dict[str, Any]:
@@ -386,6 +386,10 @@ class NeteaseMusicAdapter(MusicPlatformAdapter):
         self, artist_id: str, limit: int = 50
     ) -> List[Dict[str, Any]]:
         """获取网易云音乐艺术家的热门歌曲"""
+        return []
+
+    async def get_album_tracks(self, album_id: str) -> List[Dict[str, Any]]:
+        """获取网易云音乐专辑中的歌曲"""
         return []
 
     async def get_track_details(self, track_id: str) -> Dict[str, Any]:

@@ -89,7 +89,8 @@ class MusicSubscriptionManager:
             self.stats["total_searches"] = 0
         elif self.stats["total_searches"] is None:
             self.stats["total_searches"] = 0
-        self.stats["total_searches"] += 1
+        if self.stats["total_searches"] is not None:
+            self.stats["total_searches"] += 1
 
         try:
             if platform == "all":
@@ -183,7 +184,7 @@ class MusicSubscriptionManager:
 
     async def sync_subscriptions(self) -> Dict[str, Any]:
         """同步所有订阅"""
-        sync_results = {
+        sync_results: Dict[str, Any] = {
             "total": len(self.subscriptions),
             "successful": 0,
             "failed": 0,
@@ -205,25 +206,29 @@ class MusicSubscriptionManager:
                 new_content = await self._sync_single_subscription(subscription)
 
                 if new_content and isinstance(new_content, list):
-                    sync_results["new_content"].extend(new_content)
-                    sync_results["successful"] = sync_results.get("successful", 0) + 1
+                    if sync_results["new_content"] is None:
+                        sync_results["new_content"] = []
+                    if isinstance(sync_results["new_content"], list):
+                        sync_results["new_content"].extend(new_content)
+                    sync_results["successful"] = int(sync_results.get("successful", 0)) + 1
                 else:
-                    sync_results["successful"] = sync_results.get("successful", 0) + 1
+                    sync_results["successful"] = int(sync_results.get("successful", 0)) + 1
 
                 # 更新同步时间
-                subscription["last_sync"] = current_time
-                subscription["next_sync"] = current_time + self._get_sync_interval(
+                subscription["last_sync"] = int(current_time.timestamp())
+                subscription["next_sync"] = int((current_time + self._get_sync_interval(
                     subscription["schedule"]
-                )
+                )).timestamp())
 
             except Exception as e:
-                sync_results["failed"] = sync_results.get("failed", 0) + 1
-                sync_results["errors"].append(
-                    {"subscription_id": subscription_id, "error": str(e)}
-                )
+                sync_results["failed"] = int(sync_results.get("failed", 0)) + 1
+                if "errors" in sync_results and isinstance(sync_results["errors"], list):
+                    sync_results["errors"].append(
+                        {"subscription_id": subscription_id, "error": str(e)}
+                    )
                 logger.error(f"订阅同步失败 {subscription_id}: {e}")
 
-        self.stats["last_sync_time"] = current_time
+        self.stats["last_sync_time"] = int(current_time.timestamp())
         logger.info(f"订阅同步完成: {sync_results}")
 
         return sync_results
@@ -317,7 +322,7 @@ class MusicSubscriptionManager:
             # 如果订阅超过30天未同步且未启用，则清理
             if (
                 sub["last_sync"]
-                and (current_time - sub["last_sync"]).days > 30
+                and (current_time - datetime.fromtimestamp(sub["last_sync"])).days > 30
                 and not sub["enabled"]
             ):
                 expired_subs.append(sub_id)

@@ -37,9 +37,10 @@ class RedisCacheManager:
             return None
 
         try:
-            data = self.client.get(key)
-            if data:
-                return json.loads(data)
+            if self.client:
+                data = self.client.get(key)
+                if data:
+                    return json.loads(data)
         except (redis.RedisError, json.JSONDecodeError) as e:
             print(f"Redis获取数据失败: {e}")
         return None
@@ -50,13 +51,14 @@ class RedisCacheManager:
             return False
 
         try:
-            ttl = ttl or self.default_ttl
-            data = json.dumps(value, default=str)
-            self.client.setex(key, ttl, data)
-            return True
+            if self.client:
+                ttl = ttl or self.default_ttl
+                data = json.dumps(value, default=str)
+                self.client.setex(key, ttl, data)
+                return True
         except (redis.RedisError, TypeError) as e:
             print(f"Redis设置数据失败: {e}")
-            return False
+        return False
 
     def delete(self, key: str) -> bool:
         """删除缓存数据"""
@@ -64,11 +66,12 @@ class RedisCacheManager:
             return False
 
         try:
-            self.client.delete(key)
-            return True
+            if self.client:
+                self.client.delete(key)
+                return True
         except redis.RedisError as e:
             print(f"Redis删除数据失败: {e}")
-            return False
+        return False
 
     def clear(self) -> bool:
         """清空所有缓存"""
@@ -76,11 +79,12 @@ class RedisCacheManager:
             return False
 
         try:
-            self.client.flushdb()
-            return True
+            if self.client:
+                self.client.flushdb()
+                return True
         except redis.RedisError as e:
             print(f"Redis清空缓存失败: {e}")
-            return False
+        return False
 
     def get_stats(self) -> dict:
         """获取缓存统计信息"""
@@ -88,16 +92,18 @@ class RedisCacheManager:
             return {"connected": False}
 
         try:
-            info = self.client.info()
-            return {
-                "connected": True,
-                "used_memory": info.get("used_memory_human", "0"),
-                "connected_clients": info.get("connected_clients", 0),
-                "keys": self.client.dbsize(),
-                "uptime": info.get("uptime_in_seconds", 0),
-            }
+            if self.client:
+                info = self.client.info()
+                return {
+                    "connected": True,
+                    "used_memory": info.get("used_memory_human", "0"),
+                    "connected_clients": info.get("connected_clients", 0),
+                    "keys": self.client.dbsize(),
+                    "uptime": info.get("uptime_in_seconds", 0),
+                }
         except redis.RedisError as e:
             return {"connected": False, "error": str(e)}
+        return {"connected": False}
 
 
 # 全局缓存管理器实例

@@ -40,7 +40,7 @@ class SubscriptionRule:
 
     name: str
     keywords: List[str]
-    exclude_keywords: Optional[List[str]] = (None,)
+    exclude_keywords: Optional[List[str]] = None
     quality: str = "1080p"
     media_type: MediaType = MediaType.MOVIE
     enabled: bool = True
@@ -62,7 +62,7 @@ class Subscription:
     last_check: Optional[datetime] = None
     next_check: Optional[datetime] = None
     check_interval: int = 3600  # 默认1小时
-    created_at: Optional[datetime] = (None,)
+    created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
     def __post_init__(self):
@@ -185,7 +185,7 @@ class SubscriptionManager:
                 continue
 
             # 不能包含排除关键词
-            if any(exclude.lower() in title for exclude in rule.exclude_keywords):
+            if rule.exclude_keywords and any(exclude.lower() in title for exclude in rule.exclude_keywords):
                 continue
 
             # 检查质量要求

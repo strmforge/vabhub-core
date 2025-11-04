@@ -3,7 +3,7 @@ Media server integration module for VabHub Core
 """
 
 import httpx
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from .config import Config
 
 
@@ -126,8 +126,9 @@ class MediaServerManager:
                 "SortBy": "DateCreated",
                 "SortOrder": "Descending",
             }
+            typed_params: Dict[str, Union[str, int]] = params  # type: ignore
             response = await self.client.get(
-                f"{server_url}/Items/Latest", headers=headers, params=params
+                f"{server_url}/Items/Latest", headers=headers, params=typed_params
             )
 
             if response.status_code == 200:

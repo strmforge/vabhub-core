@@ -5,7 +5,7 @@
 import httpx
 import asyncio
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 from enum import Enum
 from dataclasses import dataclass
 from .config import Config
@@ -471,8 +471,9 @@ class EnhancedMediaServerManager:
                     "SortOrder": "Descending",
                 }
 
+                typed_params: Dict[str, Union[str, int]] = params  # type: ignore
                 response = await client.get(
-                    f"{server_config.url}/Items/Latest", headers=headers, params=params
+                    f"{server_config.url}/Items/Latest", headers=headers, params=typed_params
                 )
 
                 if response.status_code == 200:
