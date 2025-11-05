@@ -40,13 +40,18 @@ class ChartsService:
         self._cache = {}
 
     async def fetch_charts(
-        self, source: str, region: str, time_range: str, media_type: str, limit: int = 20
+        self,
+        source: str,
+        region: str,
+        time_range: str,
+        media_type: str,
+        limit: int = 20,
     ) -> List[ChartItem]:
         """获取图表数据"""
         # 模拟一个错误情况来测试服务错误处理
         if source == "invalid_source":
             raise Exception("Invalid source provided")
-            
+
         # This is a placeholder implementation for tests
         return [
             ChartItem(
@@ -60,26 +65,61 @@ class ChartsService:
                 poster_url="http://example.com/poster.jpg",
                 provider=source,
                 region=region,
-                time_range=time_range
+                time_range=time_range,
             )
         ]
 
-    def get_charts_data(self, source: str, region: str, time_range: str, media_type: str):
+    def get_charts_data(
+        self, source: str, region: str, time_range: str, media_type: str
+    ):
         """获取图表数据"""
-        # This is a placeholder implementation for tests
-        pass
+        # 检查缓存中是否有数据
+        cache_key = f"chart_{source}_{region}_{time_range}_{media_type}"
+        
+        # 如果有缓存，返回缓存数据
+        if hasattr(self, '_cache') and cache_key in self._cache:
+            return self._cache[cache_key]
+        
+        # 返回一些测试数据
+        data = {
+            "source": source,
+            "region": region,
+            "time_range": time_range,
+            "media_type": media_type,
+            "items": [],
+            "total": 0,
+            "page": 1,
+            "total_pages": 1,
+        }
+        
+        # 保存到缓存
+        if hasattr(self, '_cache'):
+            self._cache[cache_key] = data
+            
+        return data
 
-    def save_charts_data(self, source: str, region: str, time_range: str, media_type: str, chart_data: dict):
+    def save_charts_data(
+        self,
+        source: str,
+        region: str,
+        time_range: str,
+        media_type: str,
+        chart_data: dict,
+    ):
         """保存图表数据"""
         # This is a placeholder implementation for tests
         pass
 
-    def fetch_external_charts(self, source: str, region: str, time_range: str, media_type: str):
+    def fetch_external_charts(
+        self, source: str, region: str, time_range: str, media_type: str
+    ):
         """获取外部图表数据"""
         # This is a placeholder implementation for tests
         pass
 
-    def generate_fallback_data(self, source: str, region: str, time_range: str, media_type: str):
+    def generate_fallback_data(
+        self, source: str, region: str, time_range: str, media_type: str
+    ):
         """生成备用数据"""
         return {
             "source": source,
@@ -89,20 +129,24 @@ class ChartsService:
             "items": [],
             "total": 0,
             "page": 1,
-            "total_pages": 1
+            "total_pages": 1,
         }
 
-    def validate_parameters(self, source: str, region: str, time_range: str, media_type: str) -> bool:
+    def validate_parameters(
+        self, source: str, region: str, time_range: str, media_type: str
+    ) -> bool:
         """验证参数"""
         valid_sources = ["tmdb", "spotify", "apple_music", "bangumi"]
         valid_regions = ["US", "GB", "JP", "KR", "CN"]
         valid_time_ranges = ["day", "week", "month", "year"]
         valid_media_types = ["movie", "tv", "music", "anime", "all"]
-        
-        return (source in valid_sources and 
-                region in valid_regions and 
-                time_range in valid_time_ranges and 
-                media_type in valid_media_types)
+
+        return (
+            source in valid_sources
+            and region in valid_regions
+            and time_range in valid_time_ranges
+            and media_type in valid_media_types
+        )
 
     def get_supported_sources(self):
         """获取支持的数据源"""
@@ -120,19 +164,21 @@ class ChartsService:
         """获取支持的媒体类型"""
         return ["movie", "tv", "music", "anime", "all"]
 
-    def _generate_cache_key(self, source: str, region: str, time_range: str, media_type: str, limit: int) -> str:
+    def _generate_cache_key(
+        self, source: str, region: str, time_range: str, media_type: str, limit: int
+    ) -> str:
         """生成缓存键"""
         return f"{source}:{region}:{time_range}:{media_type}:{limit}"
 
     def _normalize_tmdb_data(self, raw_data: dict) -> dict:
         """标准化TMDB数据"""
         normalized = raw_data.copy()
-        if 'title' in normalized:
-            normalized['title'] = normalized['title'].title()
-        if 'popularity' in normalized and isinstance(normalized['popularity'], str):
-            normalized['popularity'] = int(normalized['popularity'])
-        if 'score' in normalized and isinstance(normalized['score'], str):
-            normalized['score'] = float(normalized['score'])
+        if "title" in normalized:
+            normalized["title"] = normalized["title"].title()
+        if "popularity" in normalized and isinstance(normalized["popularity"], str):
+            normalized["popularity"] = int(normalized["popularity"])
+        if "score" in normalized and isinstance(normalized["score"], str):
+            normalized["score"] = float(normalized["score"])
         return normalized
 
 

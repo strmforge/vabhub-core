@@ -7,7 +7,7 @@ from unittest.mock import Mock, AsyncMock, patch
 
 from core.config import Config
 from core.database import DatabaseManager
-from core.cache import RedisCacheManager
+from core.cache_manager import RedisCacheBackend
 
 
 @pytest.fixture(scope="session")
@@ -40,24 +40,21 @@ async def test_config():
 
 
 @pytest.fixture
-async def database_manager(temp_db_path):
+def database_manager(temp_db_path):
     """Create a database manager for testing."""
     db_url = f"sqlite:///{temp_db_path}"
     db = DatabaseManager(db_url)
-    await db.initialize()
-    yield db
-    await db.close()
+    return db
 
 
 @pytest.fixture
-async def cache_manager():
+def cache_manager():
     """Create a mock cache manager for testing."""
-    with patch("core.cache.redis.Redis") as mock_redis:
-        mock_redis_instance = AsyncMock()
-        mock_redis.return_value = mock_redis_instance
-
-        cache = RedisCacheManager("redis://localhost:6379/1", 300)
-        yield cache
+    # Create a mock RedisCacheBackend
+    cache = AsyncMock(spec=RedisCacheBackend)
+    cache.redis_url = "redis://localhost:6379/1"
+    cache.default_ttl = 300
+    return cache
 
 
 @pytest.fixture

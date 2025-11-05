@@ -13,9 +13,11 @@ from typing import Any, Optional, List, Dict, Tuple
 class PathManager:
     """路径管理器，负责文件路径的优化和管理"""
 
-    def __init__(self, base_path: str):
-        self.base_path: Path = Path(base_path)
-        self.base_path.mkdir(parents=True, exist_ok=True)
+    def __init__(self, base_path: Optional[str] = None):
+        self.base_path: Optional[Path] = None
+        if base_path is not None:
+            self.base_path = Path(base_path)
+            self.base_path.mkdir(parents=True, exist_ok=True)
         self.logger: logging.Logger = logging.getLogger(__name__)
 
     def sanitize_filename(self, filename: str) -> str:
@@ -41,6 +43,10 @@ class PathManager:
         # 确保文件名不为空
         if not sanitized:
             sanitized = "unnamed_file"
+
+        # 限制文件名长度
+        if len(sanitized) > 255:
+            sanitized = sanitized[:255]
 
         return sanitized
 
@@ -89,17 +95,21 @@ class PathManager:
         path = Path(filepath)
         filename = path.name
 
-        # 根据类型创建目录结构
-        if media_type == "movie":
-            target_dir = self.base_path / "Movies"
-        elif media_type == "tv":
-            target_dir = self.base_path / "TV Shows"
-        elif media_type == "music":
-            target_dir = self.base_path / "Music"
+        # 如果没有设置base_path，则使用文件的当前目录
+        if self.base_path is None:
+            target_dir = path.parent
         else:
-            target_dir = self.base_path / "Other"
+            # 根据类型创建目录结构
+            if media_type == "movie":
+                target_dir = self.base_path / "Movies"
+            elif media_type == "tv":
+                target_dir = self.base_path / "TV Shows"
+            elif media_type == "music":
+                target_dir = self.base_path / "Music"
+            else:
+                target_dir = self.base_path / "Other"
 
-        target_dir.mkdir(parents=True, exist_ok=True)
+            target_dir.mkdir(parents=True, exist_ok=True)
 
         return target_dir / filename
 
@@ -117,10 +127,10 @@ class PathManager:
         Returns:
             是否成功创建
         """
+        source_path = Path(source)
+        dest_path = Path(destination)
+        
         try:
-            source_path = Path(source)
-            dest_path = Path(destination)
-
             # 确保目标目录存在
             dest_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -134,6 +144,17 @@ class PathManager:
                 dest_path.symlink_to(source_path)
 
             return True
+        except OSError as e:
+            # 在Windows上创建符号链接可能需要特殊权限
+            # 如果失败，尝试复制文件作为替代方案
+            if hasattr(e, 'winerror') and e.winerror == 1314:  # 权限不足
+                try:
+                    shutil.copy2(source_path, dest_path)
+                    return True
+                except Exception:
+                    pass
+            self.logger.error(f"创建链接失败: {e}")
+            return False
         except Exception as e:
             self.logger.error(f"创建链接失败: {e}")
             return False
@@ -314,7 +335,7 @@ class PathManager:
 
     def _get_file_hash(self, filepath: Path) -> str:
         """
-        计算文件哈希（简化实现）
+        计算文件哈希
 
         Args:
             filepath: 文件路径
@@ -324,11 +345,12 @@ class PathManager:
         """
         import hashlib
 
-        # 简化实现：使用文件大小和修改时间
-        stat = filepath.stat()
-        hash_data = f"{filepath.name}_{stat.st_size}_{stat.st_mtime}"
-
-        return hashlib.md5(hash_data.encode()).hexdigest()
+        # 计算文件的实际内容哈希
+        hash_md5 = hashlib.md5()
+        with open(filepath, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
 
     def cleanup_empty_dirs(self, directory: str) -> List[str]:
         """
@@ -357,6 +379,21 @@ class PathManager:
 
         return removed_dirs
 
+    def organize_media_files(self, source_dir: str, target_base: str) -> Dict[str, Any]:
+        """
+        组织媒体文件
+
+        Args:
+            source_dir: 源目录
+            target_base: 目标基础目录
+
+        Returns:
+            组织结果
+        """
+        # 创建一个FileOrganizer实例来执行组织操作
+        organizer = FileOrganizer(self)
+        return organizer.organize_media_files(source_dir, target_base)
+
 
 class FileOrganizer:
     """文件组织器，负责自动组织文件结构"""
@@ -383,34 +420,39 @@ class FileOrganizer:
         }
 
         source_path = Path(source_dir)
-
+        
+        # 先收集所有文件，避免在移动过程中重复处理
+        files_to_process = []
         for file_path in source_path.rglob("*"):
             if file_path.is_file():
-                try:
-                    # 识别文件类型
-                    media_type = self._identify_media_type(file_path)
+                files_to_process.append(file_path)
 
-                    # 组织文件
-                    target_path = self.path_manager.organize_by_type(
-                        str(file_path), media_type
-                    )
+        for file_path in files_to_process:
+            try:
+                # 识别文件类型
+                media_type = self._identify_media_type(file_path)
 
-                    # 移动文件
-                    shutil.move(str(file_path), str(target_path))
+                # 组织文件
+                target_path = self.path_manager.organize_by_type(
+                    str(file_path), media_type
+                )
 
-                    results["processed"] = results["processed"] + 1  # type: ignore
-                    results["success"] = results["success"] + 1  # type: ignore
-                    results["moved_files"].append(
-                        {
-                            "source": str(file_path),
-                            "target": str(target_path),
-                            "type": media_type,
-                        }
-                    )
+                # 移动文件
+                shutil.move(str(file_path), str(target_path))
 
-                except Exception as e:
-                    results["processed"] = results["processed"] + 1  # type: ignore
-                    results["errors"].append({"file": str(file_path), "error": str(e)})
+                results["processed"] = results["processed"] + 1  # type: ignore
+                results["success"] = results["success"] + 1  # type: ignore
+                results["moved_files"].append(
+                    {
+                        "source": str(file_path),
+                        "target": str(target_path),
+                        "type": media_type,
+                    }
+                )
+
+            except Exception as e:
+                results["processed"] = results["processed"] + 1  # type: ignore
+                results["errors"].append({"file": str(file_path), "error": str(e)})
 
         return results
 

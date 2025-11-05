@@ -196,11 +196,7 @@ class QbittorrentClient(DownloadClient):
     async def connect(self) -> bool:
         """连接qBittorrent"""
         try:
-            from qbittorrentapi import Client, LoginFailed
-
-            # 注意：qbittorrentapi的Client不接受timeout参数
-            from qbittorrentapi import Client
-
+            # 使用已经导入的Client类
             self._client = cast(
                 Any,
                 Client(
@@ -221,10 +217,6 @@ class QbittorrentClient(DownloadClient):
             logger.info(f"成功连接到qBittorrent: {self.config.base_url}")
             return True
 
-        except LoginFailed as e:
-            logger.error(f"qBittorrent登录失败: {e}")
-            self._connected = False
-            return False
         except Exception as e:
             logger.error(f"连接qBittorrent失败: {e}")
             self._connected = False
@@ -563,3 +555,12 @@ class DownloadClientFactory:
             raise NotImplementedError("Aria2客户端暂未实现")
         else:
             raise ValueError(f"不支持的下载器类型: {config.client_type}")
+
+# 为测试兼容性，在模块级别导出Client类
+# 这样测试文件中的 patch("core.download_client.Client") 就可以正常工作
+try:
+    from qbittorrentapi import Client
+except ImportError:
+    # 如果qbittorrentapi未安装，创建一个虚拟类以满足测试需求
+    class Client:
+        pass

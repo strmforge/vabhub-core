@@ -75,6 +75,8 @@ def verify_jwt_token(token: str) -> Optional[dict]:
 def verify_api_key(api_key: str) -> bool:
     # 这里应该查询数据库验证API Key
     # 简化实现，实际应该检查数据库
+    if api_key is None:
+        return False
     return api_key.startswith("vabhub_")
 
 

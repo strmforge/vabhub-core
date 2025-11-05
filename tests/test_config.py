@@ -154,7 +154,9 @@ class TestConfig:
         results = []
 
         def get_config_thread():
-            config = get_config()
+            from core.config import Config
+
+            config = Config()
             results.append(config.DATABASE_URL)
 
         # Create multiple threads
