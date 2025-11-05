@@ -556,6 +556,7 @@ class DownloadClientFactory:
         else:
             raise ValueError(f"不支持的下载器类型: {config.client_type}")
 
+
 # 为测试兼容性，在模块级别导出Client类
 # 这样测试文件中的 patch("core.download_client.Client") 就可以正常工作
 try:

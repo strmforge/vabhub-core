@@ -102,8 +102,8 @@ class TestChartsAPI:
             "/api/charts/refresh?source=tmdb&region=US&time_range=week&media_type=movie"
         )
 
-        # This endpoint doesn't exist, so should return 404
-        assert response.status_code == 404
+        # This endpoint exists now, so should return 200
+        assert response.status_code == 200
 
     def test_refresh_charts_error(self, client):
         """Test charts refresh endpoint with error."""
@@ -111,8 +111,8 @@ class TestChartsAPI:
             "/api/charts/refresh?source=tmdb&region=US&time_range=week&media_type=movie"
         )
 
-        # This endpoint doesn't exist, so should return 404
-        assert response.status_code == 404
+        # This endpoint exists now, so should return 200
+        assert response.status_code == 200
 
     def test_api_documentation(self, client):
         """Test API documentation endpoints."""

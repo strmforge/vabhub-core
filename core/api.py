@@ -6,6 +6,7 @@ import logging
 import os
 from typing import Optional, Any, Dict, List
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from .config import Config
 from .auth import AuthManager
@@ -123,6 +124,15 @@ class VabHubAPI:
 
         # 添加限流中间件
         # self.app.add_middleware(create_rate_limit_middleware)  # create_rate_limit_middleware 暂时未实现
+
+        # 添加CORS中间件
+        self.app.add_middleware(
+            CORSMiddleware,
+            allow_origins=["*"],  # 在生产环境中应该指定具体的域名
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
 
         # 添加全局异常处理器
         self.app.add_exception_handler(Exception, exception_handler)
@@ -643,16 +653,23 @@ class VabHubAPI:
 
         @self.app.post("/api/charts/refresh")
         async def refresh_charts(
-            source: str = Query(..., description="数据源: tmdb, spotify, apple_music, bangumi"),
+            source: str = Query(
+                ..., description="数据源: tmdb, spotify, apple_music, bangumi"
+            ),
             region: str = Query("US", description="地区代码"),
             time_range: str = Query("week", description="时间范围: day, week, month"),
-            media_type: str = Query("all", description="媒体类型: movie, tv, music, anime, all")
+            media_type: str = Query(
+                "all", description="媒体类型: movie, tv, music, anime, all"
+            ),
         ):
             """刷新图表数据"""
             try:
                 # 这里应该实现实际的刷新逻辑
                 # 目前我们只是返回一个成功的响应
-                return {"success": True, "message": "Charts data refreshed successfully"}
+                return {
+                    "success": True,
+                    "message": "Charts data refreshed successfully",
+                }
             except Exception as e:
                 raise HTTPException(
                     status_code=500, detail=f"Failed to refresh charts: {str(e)}"

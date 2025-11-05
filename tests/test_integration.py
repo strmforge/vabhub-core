@@ -77,10 +77,10 @@ class TestIntegration:
         async for data in integration_setup:
             setup_data = data
             break
-            
+
         if setup_data is None:
             pytest.fail("Failed to get setup data from fixture")
-            
+
         db = setup_data["db"]
         cache = setup_data["cache"]
         charts_service = setup_data["charts_service"]
@@ -123,7 +123,7 @@ class TestIntegration:
             assert "id" in data[0]
             assert "title" in data[0]
             assert "provider" in data[0]
-            
+
             # Note: The API doesn't save data to database in this mock setup
             # so we can't verify database operations
 
@@ -138,10 +138,10 @@ class TestIntegration:
         async for data in integration_setup:
             setup_data = data
             break
-            
+
         if setup_data is None:
             pytest.fail("Failed to get setup data from fixture")
-            
+
         client = setup_data["client"]
 
         # Mock external API for refresh
@@ -187,10 +187,10 @@ class TestIntegration:
         async for data in integration_setup:
             setup_data = data
             break
-            
+
         if setup_data is None:
             pytest.fail("Failed to get setup data from fixture")
-            
+
         client = setup_data["client"]
 
         # Create multiple concurrent requests
@@ -218,10 +218,10 @@ class TestIntegration:
         async for data in integration_setup:
             setup_data = data
             break
-            
+
         if setup_data is None:
             pytest.fail("Failed to get setup data from fixture")
-            
+
         client = setup_data["client"]
 
         # Mock database failure
@@ -246,10 +246,10 @@ class TestIntegration:
         async for data in integration_setup:
             setup_data = data
             break
-            
+
         if setup_data is None:
             pytest.fail("Failed to get setup data from fixture")
-            
+
         db = setup_data["db"]
         cache = setup_data["cache"]
         charts_service = setup_data["charts_service"]
@@ -287,10 +287,10 @@ class TestIntegration:
         async for data in integration_setup:
             setup_data = data
             break
-            
+
         if setup_data is None:
             pytest.fail("Failed to get setup data from fixture")
-            
+
         client = setup_data["client"]
 
         import time
@@ -317,10 +317,10 @@ class TestIntegration:
         async for data in integration_setup:
             setup_data = data
             break
-            
+
         if setup_data is None:
             pytest.fail("Failed to get setup data from fixture")
-            
+
         db = setup_data["db"]
         cache = setup_data["cache"]
         charts_service = setup_data["charts_service"]
@@ -354,9 +354,7 @@ class TestIntegration:
         charts_service._cache[cache_key] = test_data
 
         # Verify service returns same data
-        service_data = charts_service.get_charts_data(
-            "tmdb", "US", "week", "movie"
-        )
+        service_data = charts_service.get_charts_data("tmdb", "US", "week", "movie")
 
         assert service_data == test_data
 
@@ -388,10 +386,10 @@ class TestIntegration:
         async for data in integration_setup:
             setup_data = data
             break
-            
+
         if setup_data is None:
             pytest.fail("Failed to get setup data from fixture")
-            
+
         client = setup_data["client"]
 
         # Test various security headers
@@ -426,10 +424,10 @@ class TestIntegration:
         async for data in integration_setup:
             setup_data = data
             break
-            
+
         if setup_data is None:
             pytest.fail("Failed to get setup data from fixture")
-            
+
         client = setup_data["client"]
 
         # Test invalid parameters
@@ -458,10 +456,10 @@ class TestIntegration:
         async for data in integration_setup:
             setup_data = data
             break
-            
+
         if setup_data is None:
             pytest.fail("Failed to get setup data from fixture")
-            
+
         client = setup_data["client"]
 
         # Test health endpoint

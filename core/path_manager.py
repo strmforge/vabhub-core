@@ -129,7 +129,7 @@ class PathManager:
         """
         source_path = Path(source)
         dest_path = Path(destination)
-        
+
         try:
             # 确保目标目录存在
             dest_path.parent.mkdir(parents=True, exist_ok=True)
@@ -147,7 +147,7 @@ class PathManager:
         except OSError as e:
             # 在Windows上创建符号链接可能需要特殊权限
             # 如果失败，尝试复制文件作为替代方案
-            if hasattr(e, 'winerror') and e.winerror == 1314:  # 权限不足
+            if hasattr(e, "winerror") and e.winerror == 1314:  # 权限不足
                 try:
                     shutil.copy2(source_path, dest_path)
                     return True
@@ -420,7 +420,7 @@ class FileOrganizer:
         }
 
         source_path = Path(source_dir)
-        
+
         # 先收集所有文件，避免在移动过程中重复处理
         files_to_process = []
         for file_path in source_path.rglob("*"):

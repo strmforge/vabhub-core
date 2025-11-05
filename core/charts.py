@@ -75,11 +75,11 @@ class ChartsService:
         """获取图表数据"""
         # 检查缓存中是否有数据
         cache_key = f"chart_{source}_{region}_{time_range}_{media_type}"
-        
+
         # 如果有缓存，返回缓存数据
-        if hasattr(self, '_cache') and cache_key in self._cache:
+        if hasattr(self, "_cache") and cache_key in self._cache:
             return self._cache[cache_key]
-        
+
         # 返回一些测试数据
         data = {
             "source": source,
@@ -91,11 +91,11 @@ class ChartsService:
             "page": 1,
             "total_pages": 1,
         }
-        
+
         # 保存到缓存
-        if hasattr(self, '_cache'):
+        if hasattr(self, "_cache"):
             self._cache[cache_key] = data
-            
+
         return data
 
     def save_charts_data(

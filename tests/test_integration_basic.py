@@ -84,6 +84,14 @@ class TestIntegrationBasic:
 
     def test_cors_support(self, test_client):
         """测试CORS支持"""
-        response = test_client.options("/")
-        # CORS预检请求应该成功
-        assert response.status_code == 200
+        # 测试一个实际存在的端点
+        response = test_client.get("/api/charts?source=tmdb", 
+                                 headers={"Origin": "http://localhost"})
+        assert response.status_code == 200  # 请求成功
+        
+        # 检查响应头中是否有CORS相关字段
+        cors_headers = [
+            "access-control-allow-origin",
+            "Access-Control-Allow-Origin"
+        ]
+        assert any(header in response.headers for header in cors_headers)
