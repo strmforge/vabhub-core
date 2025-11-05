@@ -551,6 +551,25 @@ class VabHubAPI:
         ):
             """获取图表数据"""
             try:
+                # 验证参数（除了source，因为我们要测试服务错误）
+                valid_regions = ["US", "GB", "JP", "KR", "CN"]
+                valid_time_ranges = ["day", "week", "month", "year"]
+                valid_media_types = ["movie", "tv", "music", "anime", "all"]
+                
+                errors = []
+                
+                if region not in valid_regions:
+                    errors.append(f"Invalid region '{region}'. Must be one of: {valid_regions}")
+                
+                if time_range not in valid_time_ranges:
+                    errors.append(f"Invalid time_range '{time_range}'. Must be one of: {valid_time_ranges}")
+                
+                if media_type not in valid_media_types:
+                    errors.append(f"Invalid media_type '{media_type}'. Must be one of: {valid_media_types}")
+                
+                if errors:
+                    raise HTTPException(status_code=422, detail="; ".join(errors))
+                
                 charts = await self.charts_service.fetch_charts(
                     source, region, time_range, media_type, limit
                 )
@@ -594,10 +613,32 @@ class VabHubAPI:
                 ]
             }
 
+        @self.app.get("/api/charts/regions")
+        async def get_chart_regions():
+            """获取支持的地区"""
+            return {
+                "regions": ["US", "GB", "JP", "KR", "CN"]
+            }
+
+        @self.app.get("/api/charts/time-ranges")
+        async def get_chart_time_ranges():
+            """获取支持的时间范围"""
+            return {
+                "time_ranges": ["day", "week", "month", "year"]
+            }
+
+        @self.app.get("/api/charts/media-types")
+        async def get_chart_media_types():
+            """获取支持的媒体类型"""
+            return {
+                "media_types": ["movie", "tv", "music", "anime", "all"]
+            }
+
         @self.app.post("/api/charts/cache/clear")
         async def clear_charts_cache():
             """清除图表缓存"""
-            self.charts_service.cache.clear()
+            if self.charts_service.cache:
+                self.charts_service.cache.clear()
             return {"message": "Charts cache cleared successfully"}
 
     def get_app(self) -> FastAPI:
