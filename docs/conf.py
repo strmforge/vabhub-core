@@ -43,3 +43,14 @@ autodoc_default_options = {
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../core'))
+
+# Mock imports for modules that might not be available during doc build
+autodoc_mock_imports = [
+    'redis',
+    'sqlalchemy',
+    'fastapi',
+    'pydantic',
+    'httpx',
+    'graphql',
+    'strawberry'
+]

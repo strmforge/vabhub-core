@@ -20,7 +20,7 @@ Cache Module
    :show-inheritance:
 
 Database Module
--------------
+---------------
 
 .. automodule:: database
    :members:
@@ -47,6 +47,30 @@ Performance Monitor Module
 --------------------------
 
 .. automodule:: performance_monitor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Charts Module
+-------------
+
+.. automodule:: charts
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Download Client Module
+----------------------
+
+.. automodule:: download_client
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Renamer Module
+--------------
+
+.. automodule:: renamer
    :members:
    :undoc-members:
    :show-inheritance:
