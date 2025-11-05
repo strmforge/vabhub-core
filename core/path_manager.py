@@ -130,6 +130,11 @@ class PathManager:
         source_path = Path(source)
         dest_path = Path(destination)
 
+        # 检查源文件是否存在
+        if not source_path.exists():
+            self.logger.error(f"源文件不存在: {source}")
+            return False
+
         try:
             # 确保目标目录存在
             dest_path.parent.mkdir(parents=True, exist_ok=True)
