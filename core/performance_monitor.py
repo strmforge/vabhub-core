@@ -118,12 +118,26 @@ class PerformanceMonitor:
         metric = PerformanceMetric(timestamp, metric_type, value, tags)
 
         # 添加到历史记录
-        if metric_type in self.metrics_history:
-            self.metrics_history[metric_type].append(metric)
+        self.metrics_history[metric_type].append(metric)
 
         # 更新统计信息
-        if metric_type in self.stats:
-            self.stats[metric_type].update(value)
+        self.stats[metric_type].update(value)
+
+    async def record_system_metrics(self):
+        """记录系统指标"""
+        await self.collect_system_metrics()
+
+    async def record_api_metrics(self, status_code: int, response_time: float):
+        """记录API指标"""
+        # 记录响应时间
+        await self.record_metric(MetricType.RESPONSE_TIME, response_time)
+
+        # 记录请求计数
+        await self.record_metric(MetricType.REQUEST_COUNT, 1)
+
+        # 记录错误率
+        if status_code >= 400:
+            await self.record_metric(MetricType.ERROR_RATE, 1)
 
     async def record_response_time(
         self, endpoint: str, response_time: float, status_code: int
@@ -154,6 +168,7 @@ class PerformanceMonitor:
             return []
         history = list(self.metrics_history[metric_type])
         if limit:
+            # 返回最新的指标（按时间顺序）
             return history[-limit:]
         return history
 
@@ -175,13 +190,12 @@ class PerformanceMonitor:
 
         # 分析各项指标
         for metric_type, stats in self.stats.items():
-            if metric_type in self.stats:
-                analysis["metrics_summary"][metric_type.value] = {
-                    "min": stats.min_value,
-                    "max": stats.max_value,
-                    "avg": stats.avg_value,
-                    "count": stats.count,
-                }
+            analysis["metrics_summary"][metric_type.value] = {
+                "min": stats.min_value,
+                "max": stats.max_value,
+                "avg": stats.avg_value,
+                "count": stats.count,
+            }
 
             # 根据指标类型提供建议
             if metric_type == MetricType.CPU_USAGE:
